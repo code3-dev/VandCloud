@@ -278,10 +278,7 @@ jobs:
         run: |
           mkdir -p release
           # Create tar.gz archive of the Linux build
-          cd build/linux/x64/release
-          tar -czf ../../../release/VandCloud-linux.tar.gz bundle/
-          cd ../../../..
-        shell: bash
+          tar -czf release/VandCloud-linux.tar.gz -C build/linux/x64/release bundle/
 
       - name: Upload Linux artifacts
         uses: actions/upload-artifact@v4

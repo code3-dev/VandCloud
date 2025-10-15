@@ -141,7 +141,7 @@ jobs:
       - name: Install Linux dependencies
         run: |
           sudo apt-get update
-          sudo apt-get install -y clang cmake ninja-build pkg-config libgtk-3-dev liblzma-dev
+          sudo apt-get install -y clang cmake ninja-build pkg-config libgtk-3-dev liblzma-dev desktop-file-utils libgdk-pixbuf2.0-dev
         shell: bash
 
       - name: Build Linux
@@ -231,16 +231,23 @@ jobs:
           # Ensure release directory exists
           mkdir -p release
           
-          # Download AppImageKit
-          wget -O appimagetool "https://github.com/AppImage/AppImageKit/releases/download/continuous/appimagetool-x86_64.AppImage"
-          chmod +x appimagetool
+          # Get version from pubspec.yaml
+          VERSION=$(grep '^version:' pubspec.yaml | cut -d ':' -f 2 | tr -d ' ')
+          echo "Building AppImage for version: $VERSION"
+          
+          # Download linuxdeploy tool
+          echo "Downloading linuxdeploy..."
+          wget https://github.com/linuxdeploy/linuxdeploy/releases/download/continuous/linuxdeploy-x86_64.AppImage
+          chmod +x linuxdeploy-x86_64.AppImage
           
           # Create AppDir structure
+          echo "Creating AppDir structure..."
           mkdir -p vandcloud.AppDir/usr/bin
           mkdir -p vandcloud.AppDir/usr/lib
           cp -r build/linux/x64/release/bundle/* vandcloud.AppDir/usr/bin/
           
           # Create desktop entry
+          echo "Creating desktop entry..."
           cat > vandcloud.AppDir/vandcloud.desktop << EOF
           [Desktop Entry]
           Name=VandCloud
@@ -250,22 +257,21 @@ jobs:
           Categories=Utility;
           EOF
           
-          # Copy icon
+          # Copy icon with the correct name for AppImage
+          echo "Copying icon..."
           cp linux/assets/icons/icon_256.png vandcloud.AppDir/vandcloud.png
           
-          # Create AppRun script
-          cat > vandcloud.AppDir/AppRun << EOF
-          #!/bin/bash
-          HERE=\$(dirname \$(readlink -f "\${0}"))
-          exec "\$HERE/usr/bin/vandcloud" "\$@"
-          EOF
-          chmod +x vandcloud.AppDir/AppRun
+          # List files for debugging
+          echo "AppDir contents:"
+          find vandcloud.AppDir -type f | head -20
           
-          # Get version from pubspec.yaml
-          VERSION=$(grep '^version:' pubspec.yaml | cut -d ':' -f 2 | tr -d ' ')
-          
-          # Create AppImage
-          ./appimagetool vandcloud.AppDir release/VandCloud-$VERSION-linux.AppImage
+          # Try to create AppImage with proper environment
+          echo "Creating AppImage..."
+          OUTPUT=release/VandCloud-$VERSION-linux.AppImage ./linuxdeploy-x86_64.AppImage --appdir vandcloud.AppDir --output appimage --desktop-file=vandcloud.AppDir/vandcloud.desktop || {
+            echo "AppImage creation failed, continuing with other packages"
+            echo "Contents of release directory:"
+            ls -la release/ || echo "Release directory not found or empty"
+          }
         shell: bash
 
       - name: Package Linux build

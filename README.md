@@ -13,7 +13,7 @@
 
 ## 🌟 Features
 
-- **Multi-Platform Support** - Available for Android and Windows
+- **Multi-Platform Support** - Available for Android, Windows, and Linux
 - **Categorized API Directory** - Organized collection of APIs and services
 - **Real-Time Status Checking** - Test host availability with ping measurements
 - **Responsive Design** - Optimized for mobile, tablet, desktop, and TV
@@ -26,9 +26,9 @@
 |----------|--------|----------|
 | Android | ✅ Supported | [APK Releases](https://github.com/code3-dev/VandCloud/releases) |
 | Windows | ✅ Supported | [Installer](https://github.com/code3-dev/VandCloud/releases) |
+| Linux | ✅ Supported | [Packages](https://github.com/code3-dev/VandCloud/releases) |
 | iOS | ⏳ Planned | - |
 | macOS | ⏳ Planned | - |
-| Linux | ⏳ Planned | - |
 | Web | ⏳ Planned | - |
 
 ## 🚀 Installation
@@ -42,6 +42,13 @@ Download the APK file from the [releases page](https://github.com/code3-dev/Vand
 Download the installer from the [releases page](https://github.com/code3-dev/VandCloud/releases):
 - **Installer** - Easy installation with setup wizard
 - **ZIP Package** - Portable version for manual installation
+
+### Linux
+Download the appropriate package for your distribution from the [releases page](https://github.com/code3-dev/VandCloud/releases):
+- **DEB Package** - For Debian/Ubuntu-based distributions
+- **RPM Package** - For Red Hat/Fedora-based distributions
+- **AppImage** - Universal Linux package that runs on most distributions
+- **Tar.gz Archive** - Portable version for manual installation
 
 ## 🛠️ Development
 

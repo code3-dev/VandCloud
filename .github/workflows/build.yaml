@@ -187,6 +187,9 @@ jobs:
           cp linux/assets/icons/icon_512.png vandcloud-package/usr/share/icons/hicolor/512x512/apps/vandcloud.png
           cp linux/assets/icons/vandcloud.png vandcloud-package/usr/share/icons/hicolor/256x256/apps/vandcloud.png
           
+          # Ensure release directory exists
+          mkdir -p release
+          
           # Get version from pubspec.yaml
           VERSION=$(grep '^version:' pubspec.yaml | cut -d ':' -f 2 | tr -d ' ')
           
@@ -225,6 +228,9 @@ jobs:
 
       - name: Create Linux AppImage (Optional)
         run: |
+          # Ensure release directory exists
+          mkdir -p release
+          
           # Download AppImageKit
           wget -O appimagetool "https://github.com/AppImage/AppImageKit/releases/download/continuous/appimagetool-x86_64.AppImage"
           chmod +x appimagetool

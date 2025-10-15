@@ -29,6 +29,20 @@ jobs:
         with:
           channel: 'stable'
 
+      - name: Decode Keystore
+        run: |
+          $bytes = [System.Convert]::FromBase64String("${{ secrets.KEY_STORE }}")
+          [IO.File]::WriteAllBytes("android/app/keystore.jks", $bytes)
+        shell: powershell
+
+      - name: Create keystore properties file
+        run: |
+         echo storePassword=${{ secrets.KEY_STORE_PASSWORD }} > android/key.properties
+         echo keyPassword=${{ secrets.KEY_PASSWORD }} >> android/key.properties
+         echo keyAlias=${{ secrets.KEY_ALIAS }} >> android/key.properties
+         echo storeFile=keystore.jks >> android/key.properties
+        shell: bash
+
       - name: Get dependencies
         run: flutter pub get
 

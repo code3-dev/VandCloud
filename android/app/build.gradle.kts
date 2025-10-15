@@ -1,8 +1,19 @@
+import java.io.FileInputStream
+import java.util.Properties
+
 plugins {
     id("com.android.application")
     id("kotlin-android")
     // The Flutter Gradle Plugin must be applied after the Android and Kotlin Gradle plugins.
     id("dev.flutter.flutter-gradle-plugin")
+}
+
+
+// Load keystore properties
+val keystorePropertiesFile = rootProject.file("key.properties")
+val keystoreProperties = Properties()
+if (keystorePropertiesFile.exists()) {
+    keystoreProperties.load(FileInputStream(keystorePropertiesFile))
 }
 
 android {
@@ -16,7 +27,7 @@ android {
     }
 
     kotlinOptions {
-        jvmTarget = JavaVersion.VERSION_11.toString()
+        jvmTarget = "11"
     }
 
     defaultConfig {
@@ -30,31 +41,35 @@ android {
         versionName = "1.0.0"
     }
 
-    buildTypes {
-        release {
-            // Signing with the debug keys for now
-            signingConfig = signingConfigs.getByName("debug")
-            isMinifyEnabled = true
-            isShrinkResources = true
-            proguardFiles(
-                getDefaultProguardFile("proguard-android-optimize.txt"),
-                "proguard-rules.pro"
-            )
+    signingConfigs {
+        create("release") {
+            keyAlias = keystoreProperties.getProperty("keyAlias") ?: "androiddebugkey"
+            keyPassword = keystoreProperties.getProperty("keyPassword") ?: "android"
+            storeFile = file(keystoreProperties.getProperty("storeFile") ?: "keystore/debug.keystore")
+            storePassword = keystoreProperties.getProperty("storePassword") ?: "android"
         }
     }
-    
-    // Add packaging options to prevent file conflicts
-    packaging {
-        resources {
-            excludes += "/META-INF/{AL2.0,LGPL2.1}"
-            excludes += "META-INF/DEPENDENCIES"
-            excludes += "META-INF/LICENSE"
-            excludes += "META-INF/LICENSE.txt"
-            excludes += "META-INF/license.txt"
-            excludes += "META-INF/NOTICE"
-            excludes += "META-INF/NOTICE.txt"
-            excludes += "META-INF/notice.txt"
-            excludes += "META-INF/ASL2.0"
+
+    packagingOptions {
+        jniLibs {
+            useLegacyPackaging = true
+        }
+    }
+
+    splits {
+        abi {
+            isEnable = true
+            reset()
+            include("x86_64", "armeabi-v7a", "arm64-v8a")
+            isUniversalApk = true
+        }
+    }
+
+    buildTypes {
+        getByName("release") {
+            signingConfig = signingConfigs.getByName("release")
+            isMinifyEnabled = true
+            isShrinkResources = true
         }
     }
 }

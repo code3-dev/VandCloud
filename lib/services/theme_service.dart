@@ -48,38 +48,50 @@ class ThemeService {
     return AppTheme.system; // Default to system theme
   }
 
-  // Get theme data based on selected theme
-  static ThemeData getThemeData(AppTheme theme) {
+  // Get theme data based on selected theme and system brightness
+  static ThemeData getThemeData(AppTheme theme, {Brightness? systemBrightness}) {
     switch (theme) {
       case AppTheme.light:
-        return ThemeData.light(useMaterial3: true).copyWith(
-          primaryColor: Color(0xFF4A6FFF),
-          scaffoldBackgroundColor: Color(0xFFF8F9FA),
-          cardColor: Colors.white,
-          colorScheme: ColorScheme.light(
-            primary: Color(0xFF4A6FFF),
-            secondary: Color(0xFF6C63FF),
-            surface: Colors.white,
-            background: Color(0xFFF8F9FA),
-          ),
-        );
+        return _buildLightTheme();
       case AppTheme.dark:
-        return ThemeData.dark(useMaterial3: true).copyWith(
-          primaryColor: Color(0xFF6C63FF),
-          scaffoldBackgroundColor: Color(0xFF1A1A2E),
-          cardColor: Color(0xFF2D2D3A),
-          colorScheme: ColorScheme.dark(
-            primary: Color(0xFF6C63FF),
-            secondary: Color(0xFF4A6FFF),
-            surface: Color(0xFF2D2D3A),
-            background: Color(0xFF1A1A2E),
-            onSurface: Colors.white,
-            onBackground: Colors.white,
-          ),
-        );
+        return _buildDarkTheme();
       case AppTheme.system:
       default:
-        return ThemeData(useMaterial3: true);
+        // Use system brightness to determine theme
+        final brightness = systemBrightness ?? Brightness.light;
+        return brightness == Brightness.dark ? _buildDarkTheme() : _buildLightTheme();
     }
+  }
+
+  // Light theme definition
+  static ThemeData _buildLightTheme() {
+    return ThemeData.light(useMaterial3: true).copyWith(
+      primaryColor: Color(0xFF4A6FFF),
+      scaffoldBackgroundColor: Color(0xFFF8F9FA),
+      cardColor: Colors.white,
+      colorScheme: ColorScheme.light(
+        primary: Color(0xFF4A6FFF),
+        secondary: Color(0xFF6C63FF),
+        surface: Colors.white,
+        background: Color(0xFFF8F9FA),
+      ),
+    );
+  }
+
+  // Dark theme definition
+  static ThemeData _buildDarkTheme() {
+    return ThemeData.dark(useMaterial3: true).copyWith(
+      primaryColor: Color(0xFF6C63FF),
+      scaffoldBackgroundColor: Color(0xFF1A1A2E),
+      cardColor: Color(0xFF2D2D3A),
+      colorScheme: ColorScheme.dark(
+        primary: Color(0xFF6C63FF),
+        secondary: Color(0xFF4A6FFF),
+        surface: Color(0xFF2D2D3A),
+        background: Color(0xFF1A1A2E),
+        onSurface: Colors.white,
+        onBackground: Colors.white,
+      ),
+    );
   }
 }

@@ -32,24 +32,11 @@ jobs:
       - name: Get dependencies
         run: flutter pub get
 
-      - name: Clean previous builds
-        run: |
-          if (Test-Path "build") { Remove-Item -Recurse -Force "build" }
-          cd android
-          if (Test-Path "build") { Remove-Item -Recurse -Force "build" }
-          cd ..
-
       - name: Build universal APK
-        run: flutter build apk --no-tree-shake-icons
-
-      - name: Clean between builds
-        run: |
-          cd android
-          if (Test-Path "build") { Remove-Item -Recurse -Force "build" }
-          cd ..
+        run: flutter build apk
 
       - name: Build split APKs
-        run: flutter build apk --split-per-abi --no-tree-shake-icons
+        run: flutter build apk --split-per-abi
 
       - name: Rename APKs
         run: |

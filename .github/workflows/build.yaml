@@ -1,0 +1,171 @@
+name: Build and Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: 'Tag to create release for (e.g., v1.0.0)'
+        required: true
+        default: 'v1.0.0'
+
+jobs:
+  build-android:
+    runs-on: windows-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'zulu'
+          java-version: '17'
+
+      - name: Set up Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          channel: 'stable'
+
+      - name: Get dependencies
+        run: flutter pub get
+
+      - name: Clean previous builds
+        run: |
+          if (Test-Path "build") { Remove-Item -Recurse -Force "build" }
+          cd android
+          if (Test-Path "build") { Remove-Item -Recurse -Force "build" }
+          cd ..
+
+      - name: Build universal APK
+        run: flutter build apk --no-tree-shake-icons
+
+      - name: Clean between builds
+        run: |
+          cd android
+          if (Test-Path "build") { Remove-Item -Recurse -Force "build" }
+          cd ..
+
+      - name: Build split APKs
+        run: flutter build apk --split-per-abi --no-tree-shake-icons
+
+      - name: Rename APKs
+        run: |
+          mkdir -p release
+          copy build\app\outputs\flutter-apk\app-release.apk release\VandCloud-universal.apk
+          copy build\app\outputs\flutter-apk\app-armeabi-v7a-release.apk release\VandCloud-armeabi-v7a.apk
+          copy build\app\outputs\flutter-apk\app-arm64-v8a-release.apk release\VandCloud-arm64-v8a.apk
+          copy build\app\outputs\flutter-apk\app-x86_64-release.apk release\VandCloud-x86_64.apk
+        shell: cmd
+
+      - name: Upload Android artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: android-apks
+          path: release/
+
+  build-windows:
+    runs-on: windows-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          channel: 'stable'
+
+      - name: Get dependencies
+        run: flutter pub get
+
+      - name: Build Windows
+        run: flutter build windows --release
+
+      - name: Install Inno Setup
+        run: |
+          choco install innosetup -y
+        shell: cmd
+
+      - name: Create Windows installer
+        run: |
+          cd windows\installer
+          ISCC.exe VandCloud.iss
+        shell: cmd
+
+      - name: Package Windows build
+        run: |
+          mkdir -p release
+          copy windows\installer\VandCloud-setup.exe release\
+        shell: cmd
+
+      - name: Create Windows ZIP
+        run: |
+          cd release
+          7z a -tzip VandCloud-windows.zip VandCloud-setup.exe
+        shell: cmd
+
+      - name: Upload Windows artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: windows-build
+          path: |
+            release/VandCloud-setup.exe
+            release/VandCloud-windows.zip
+
+  release:
+    needs: [build-android, build-windows]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Download Android artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: android-apks
+
+      - name: Download Windows artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: windows-build
+
+      - name: Get tag name
+        id: get_tag
+        run: |
+          if [[ $GITHUB_EVENT_NAME == 'workflow_dispatch' ]]; then
+            echo "TAG_NAME=${{ github.event.inputs.tag }}" >> $GITHUB_ENV
+          else
+            echo "TAG_NAME=${GITHUB_REF#refs/tags/}" >> $GITHUB_ENV
+          fi
+        shell: bash
+
+      - name: Create Release
+        id: create_release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ env.TAG_NAME }}
+          name: Release ${{ env.TAG_NAME }}
+          draft: false
+          prerelease: false
+          files: |
+            VandCloud-universal.apk
+            VandCloud-armeabi-v7a.apk
+            VandCloud-arm64-v8a.apk
+            VandCloud-x86_64.apk
+            VandCloud-setup.exe
+            VandCloud-windows.zip
+          body: |
+            ## Installation
+            
+            ### Download
+            
+            | Platform | Architecture | Download Link |
+            |----------|-------------|---------------|
+            | Android  | Universal   | <a href="https://github.com/code3-dev/VandCloud/releases/download/${{ env.TAG_NAME }}/VandCloud-universal.apk"><img src="https://img.shields.io/badge/Android-Universal-3DDC84?style=for-the-badge&logo=android&logoColor=white" alt="Android Universal"></a> |
+            | Android  | armeabi-v7a | <a href="https://github.com/code3-dev/VandCloud/releases/download/${{ env.TAG_NAME }}/VandCloud-armeabi-v7a.apk"><img src="https://img.shields.io/badge/Android-armeabi--v7a-3DDC84?style=for-the-badge&logo=android&logoColor=white" alt="Android armeabi-v7a"></a> |
+            | Android  | arm64-v8a   | <a href="https://github.com/code3-dev/VandCloud/releases/download/${{ env.TAG_NAME }}/VandCloud-arm64-v8a.apk"><img src="https://img.shields.io/badge/Android-arm64--v8a-3DDC84?style=for-the-badge&logo=android&logoColor=white" alt="Android arm64-v8a"></a> |
+            | Android  | x86_64      | <a href="https://github.com/code3-dev/VandCloud/releases/download/${{ env.TAG_NAME }}/VandCloud-x86_64.apk"><img src="https://img.shields.io/badge/Android-x86_64-3DDC84?style=for-the-badge&logo=android&logoColor=white" alt="Android x86_64"></a> |
+            | Windows  | x64 (Installer) | <a href="https://github.com/code3-dev/VandCloud/releases/download/${{ env.TAG_NAME }}/VandCloud-setup.exe"><img src="https://img.shields.io/badge/Windows-Installer-0078D6?style=for-the-badge&logo=windows&logoColor=white" alt="Windows Installer"></a> |
+            | Windows  | x64 (ZIP)   | <a href="https://github.com/code3-dev/VandCloud/releases/download/${{ env.TAG_NAME }}/VandCloud-windows.zip"><img src="https://img.shields.io/badge/Windows-ZIP-0078D6?style=for-the-badge&logo=windows&logoColor=white" alt="Windows ZIP"></a> |

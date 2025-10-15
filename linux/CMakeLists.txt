@@ -126,3 +126,51 @@ if(NOT CMAKE_BUILD_TYPE MATCHES "Debug")
   install(FILES "${AOT_LIBRARY}" DESTINATION "${INSTALL_BUNDLE_LIB_DIR}"
     COMPONENT Runtime)
 endif()
+
+# Install the desktop file
+install(FILES "${CMAKE_CURRENT_SOURCE_DIR}/runner/vandcloud.desktop"
+  DESTINATION "${CMAKE_INSTALL_PREFIX}/share/applications/"
+  COMPONENT Runtime)
+
+# Install the main application icon
+install(FILES "${CMAKE_CURRENT_SOURCE_DIR}/assets/icons/vandcloud.png"
+  DESTINATION "${CMAKE_INSTALL_PREFIX}/share/icons/hicolor/256x256/apps/"
+  COMPONENT Runtime)
+
+# Install icons for different sizes
+install(FILES "${CMAKE_CURRENT_SOURCE_DIR}/assets/icons/icon_16.png"
+  DESTINATION "${CMAKE_INSTALL_PREFIX}/share/icons/hicolor/16x16/apps/"
+  RENAME "vandcloud.png"
+  COMPONENT Runtime)
+install(FILES "${CMAKE_CURRENT_SOURCE_DIR}/assets/icons/icon_22.png"
+  DESTINATION "${CMAKE_INSTALL_PREFIX}/share/icons/hicolor/22x22/apps/"
+  RENAME "vandcloud.png"
+  COMPONENT Runtime)
+install(FILES "${CMAKE_CURRENT_SOURCE_DIR}/assets/icons/icon_24.png"
+  DESTINATION "${CMAKE_INSTALL_PREFIX}/share/icons/hicolor/24x24/apps/"
+  RENAME "vandcloud.png"
+  COMPONENT Runtime)
+install(FILES "${CMAKE_CURRENT_SOURCE_DIR}/assets/icons/icon_32.png"
+  DESTINATION "${CMAKE_INSTALL_PREFIX}/share/icons/hicolor/32x32/apps/"
+  RENAME "vandcloud.png"
+  COMPONENT Runtime)
+install(FILES "${CMAKE_CURRENT_SOURCE_DIR}/assets/icons/icon_48.png"
+  DESTINATION "${CMAKE_INSTALL_PREFIX}/share/icons/hicolor/48x48/apps/"
+  RENAME "vandcloud.png"
+  COMPONENT Runtime)
+install(FILES "${CMAKE_CURRENT_SOURCE_DIR}/assets/icons/icon_64.png"
+  DESTINATION "${CMAKE_INSTALL_PREFIX}/share/icons/hicolor/64x64/apps/"
+  RENAME "vandcloud.png"
+  COMPONENT Runtime)
+install(FILES "${CMAKE_CURRENT_SOURCE_DIR}/assets/icons/icon_128.png"
+  DESTINATION "${CMAKE_INSTALL_PREFIX}/share/icons/hicolor/128x128/apps/"
+  RENAME "vandcloud.png"
+  COMPONENT Runtime)
+install(FILES "${CMAKE_CURRENT_SOURCE_DIR}/assets/icons/icon_256.png"
+  DESTINATION "${CMAKE_INSTALL_PREFIX}/share/icons/hicolor/256x256/apps/"
+  RENAME "vandcloud.png"
+  COMPONENT Runtime)
+install(FILES "${CMAKE_CURRENT_SOURCE_DIR}/assets/icons/icon_512.png"
+  DESTINATION "${CMAKE_INSTALL_PREFIX}/share/icons/hicolor/512x512/apps/"
+  RENAME "vandcloud.png"
+  COMPONENT Runtime)

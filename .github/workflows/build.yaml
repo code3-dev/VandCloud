@@ -101,10 +101,18 @@ jobs:
           copy windows\installer\VandCloud-setup.exe release\
         shell: cmd
 
-      - name: Create Windows ZIP
+      - name: Create Windows ZIP (Installer)
         run: |
           cd release
-          7z a -tzip VandCloud-windows.zip VandCloud-setup.exe
+          7z a -tzip VandCloud-windows-installer.zip VandCloud-setup.exe
+        shell: cmd
+
+      - name: Create Windows Portable ZIP
+        run: |
+          mkdir -p release\portable
+          xcopy build\windows\x64\runner\Release\* release\portable\ /E /I
+          cd release
+          7z a -tzip VandCloud-windows-portable.zip portable\
         shell: cmd
 
       - name: Upload Windows artifacts
@@ -113,10 +121,168 @@ jobs:
           name: windows-build
           path: |
             release/VandCloud-setup.exe
-            release/VandCloud-windows.zip
+            release/VandCloud-windows-installer.zip
+            release/VandCloud-windows-portable.zip
+
+  build-linux:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          channel: 'stable'
+
+      - name: Get dependencies
+        run: flutter pub get
+
+      - name: Install Linux dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y clang cmake ninja-build pkg-config libgtk-3-dev liblzma-dev
+        shell: bash
+
+      - name: Build Linux
+        run: flutter build linux --release
+
+      - name: Install packaging tools
+        run: |
+          sudo apt-get install -y rpm ruby ruby-dev rubygems build-essential
+          sudo gem install fpm
+        shell: bash
+
+      - name: Create DEB and RPM packages
+        run: |
+          # Create directory structure for packaging
+          mkdir -p vandcloud-package/usr/bin
+          mkdir -p vandcloud-package/usr/lib
+          mkdir -p vandcloud-package/usr/share/applications
+          mkdir -p vandcloud-package/usr/share/icons/hicolor/16x16/apps
+          mkdir -p vandcloud-package/usr/share/icons/hicolor/22x22/apps
+          mkdir -p vandcloud-package/usr/share/icons/hicolor/24x24/apps
+          mkdir -p vandcloud-package/usr/share/icons/hicolor/32x32/apps
+          mkdir -p vandcloud-package/usr/share/icons/hicolor/48x48/apps
+          mkdir -p vandcloud-package/usr/share/icons/hicolor/64x64/apps
+          mkdir -p vandcloud-package/usr/share/icons/hicolor/128x128/apps
+          mkdir -p vandcloud-package/usr/share/icons/hicolor/256x256/apps
+          mkdir -p vandcloud-package/usr/share/icons/hicolor/512x512/apps
+          
+          # Copy application files
+          cp -r build/linux/x64/release/bundle/* vandcloud-package/usr/bin/
+          
+          # Copy desktop file
+          cp linux/runner/vandcloud.desktop vandcloud-package/usr/share/applications/
+          
+          # Copy icons
+          cp linux/assets/icons/icon_16.png vandcloud-package/usr/share/icons/hicolor/16x16/apps/vandcloud.png
+          cp linux/assets/icons/icon_22.png vandcloud-package/usr/share/icons/hicolor/22x22/apps/vandcloud.png
+          cp linux/assets/icons/icon_24.png vandcloud-package/usr/share/icons/hicolor/24x24/apps/vandcloud.png
+          cp linux/assets/icons/icon_32.png vandcloud-package/usr/share/icons/hicolor/32x32/apps/vandcloud.png
+          cp linux/assets/icons/icon_48.png vandcloud-package/usr/share/icons/hicolor/48x48/apps/vandcloud.png
+          cp linux/assets/icons/icon_64.png vandcloud-package/usr/share/icons/hicolor/64x64/apps/vandcloud.png
+          cp linux/assets/icons/icon_128.png vandcloud-package/usr/share/icons/hicolor/128x128/apps/vandcloud.png
+          cp linux/assets/icons/icon_256.png vandcloud-package/usr/share/icons/hicolor/256x256/apps/vandcloud.png
+          cp linux/assets/icons/icon_512.png vandcloud-package/usr/share/icons/hicolor/512x512/apps/vandcloud.png
+          cp linux/assets/icons/vandcloud.png vandcloud-package/usr/share/icons/hicolor/256x256/apps/vandcloud.png
+          
+          # Get version from pubspec.yaml
+          VERSION=$(grep '^version:' pubspec.yaml | cut -d ':' -f 2 | tr -d ' ')
+          
+          # Create DEB package
+          fpm -s dir -t deb \
+            -n vandcloud \
+            -v $VERSION \
+            --description "VandCloud Application" \
+            --url "https://github.com/code3-dev/VandCloud" \
+            --maintainer "Hossein Pira" \
+            --vendor "VandCloud" \
+            --license "MIT" \
+            --category "Utility" \
+            --depends "libgtk-3-0" \
+            --depends "liblzma5" \
+            -C vandcloud-package \
+            --package release/vandcloud.deb \
+            .
+          
+          # Create RPM package
+          fpm -s dir -t rpm \
+            -n vandcloud \
+            -v $VERSION \
+            --description "VandCloud" \
+            --url "https://github.com/code3-dev/VandCloud" \
+            --maintainer "Hossein Pira" \
+            --vendor "VandCloud" \
+            --license "MIT" \
+            --category "Applications/Utilities" \
+            --depends "gtk3" \
+            --depends "xz-libs" \
+            -C vandcloud-package \
+            --package release/vandcloud.rpm \
+            .
+        shell: bash
+
+      - name: Create Linux AppImage (Optional)
+        run: |
+          # Download AppImageKit
+          wget -O appimagetool "https://github.com/AppImage/AppImageKit/releases/download/continuous/appimagetool-x86_64.AppImage"
+          chmod +x appimagetool
+          
+          # Create AppDir structure
+          mkdir -p vandcloud.AppDir/usr/bin
+          mkdir -p vandcloud.AppDir/usr/lib
+          cp -r build/linux/x64/release/bundle/* vandcloud.AppDir/usr/bin/
+          
+          # Create desktop entry
+          cat > vandcloud.AppDir/vandcloud.desktop << EOF
+          [Desktop Entry]
+          Name=VandCloud
+          Exec=vandcloud
+          Icon=vandcloud
+          Type=Application
+          Categories=Utility;
+          EOF
+          
+          # Copy icon
+          cp linux/assets/icons/icon_256.png vandcloud.AppDir/vandcloud.png
+          
+          # Create AppRun script
+          cat > vandcloud.AppDir/AppRun << EOF
+          #!/bin/bash
+          HERE=\$(dirname \$(readlink -f "\${0}"))
+          exec "\$HERE/usr/bin/vandcloud" "\$@"
+          EOF
+          chmod +x vandcloud.AppDir/AppRun
+          
+          # Get version from pubspec.yaml
+          VERSION=$(grep '^version:' pubspec.yaml | cut -d ':' -f 2 | tr -d ' ')
+          
+          # Create AppImage
+          ./appimagetool vandcloud.AppDir release/VandCloud-$VERSION-linux.AppImage
+        shell: bash
+
+      - name: Package Linux build
+        run: |
+          mkdir -p release
+          # Create tar.gz archive of the Linux build
+          cd build/linux/x64/release
+          tar -czf ../../../release/VandCloud-linux.tar.gz bundle/
+          cd ../../../..
+        shell: bash
+
+      - name: Upload Linux artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: linux-build
+          path: |
+            release/VandCloud-linux.tar.gz
+            release/VandCloud-*-linux.AppImage
+            release/vandcloud.deb
+            release/vandcloud.rpm
 
   release:
-    needs: [build-android, build-windows]
+    needs: [build-android, build-windows, build-linux]
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code
@@ -131,6 +297,11 @@ jobs:
         uses: actions/download-artifact@v4
         with:
           name: windows-build
+
+      - name: Download Linux artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: linux-build
 
       - name: Get tag name
         id: get_tag
@@ -156,7 +327,12 @@ jobs:
             VandCloud-arm64-v8a.apk
             VandCloud-x86_64.apk
             VandCloud-setup.exe
-            VandCloud-windows.zip
+            VandCloud-windows-installer.zip
+            VandCloud-windows-portable.zip
+            VandCloud-linux.tar.gz
+            VandCloud-*linux.AppImage
+            vandcloud.deb
+            vandcloud.rpm
           body: |
             ## Installation
             
@@ -169,4 +345,9 @@ jobs:
             | Android  | arm64-v8a   | <a href="https://github.com/code3-dev/VandCloud/releases/download/${{ env.TAG_NAME }}/VandCloud-arm64-v8a.apk"><img src="https://img.shields.io/badge/Android-arm64--v8a-3DDC84?style=for-the-badge&logo=android&logoColor=white" alt="Android arm64-v8a"></a> |
             | Android  | x86_64      | <a href="https://github.com/code3-dev/VandCloud/releases/download/${{ env.TAG_NAME }}/VandCloud-x86_64.apk"><img src="https://img.shields.io/badge/Android-x86_64-3DDC84?style=for-the-badge&logo=android&logoColor=white" alt="Android x86_64"></a> |
             | Windows  | x64 (Installer) | <a href="https://github.com/code3-dev/VandCloud/releases/download/${{ env.TAG_NAME }}/VandCloud-setup.exe"><img src="https://img.shields.io/badge/Windows-Installer-0078D6?style=for-the-badge&logo=windows&logoColor=white" alt="Windows Installer"></a> |
-            | Windows  | x64 (ZIP)   | <a href="https://github.com/code3-dev/VandCloud/releases/download/${{ env.TAG_NAME }}/VandCloud-windows.zip"><img src="https://img.shields.io/badge/Windows-ZIP-0078D6?style=for-the-badge&logo=windows&logoColor=white" alt="Windows ZIP"></a> |
+            | Windows  | x64 (ZIP - Installer) | <a href="https://github.com/code3-dev/VandCloud/releases/download/${{ env.TAG_NAME }}/VandCloud-windows-installer.zip"><img src="https://img.shields.io/badge/Windows-ZIP--Installer-0078D6?style=for-the-badge&logo=windows&logoColor=white" alt="Windows ZIP Installer"></a> |
+            | Windows  | x64 (Portable ZIP) | <a href="https://github.com/code3-dev/VandCloud/releases/download/${{ env.TAG_NAME }}/VandCloud-windows-portable.zip"><img src="https://img.shields.io/badge/Windows-Portable--ZIP-0078D6?style=for-the-badge&logo=windows&logoColor=white" alt="Windows Portable ZIP"></a> |
+            | Linux    | x64 (tar.gz) | <a href="https://github.com/code3-dev/VandCloud/releases/download/${{ env.TAG_NAME }}/VandCloud-linux.tar.gz"><img src="https://img.shields.io/badge/Linux-tar.gz-FCC624?style=for-the-badge&logo=linux&logoColor=black" alt="Linux tar.gz"></a> |
+            | Linux    | x64 (AppImage) | <a href="https://github.com/code3-dev/VandCloud/releases/download/${{ env.TAG_NAME }}/VandCloud-*-linux.AppImage"><img src="https://img.shields.io/badge/Linux-AppImage-FCC624?style=for-the-badge&logo=linux&logoColor=black" alt="Linux AppImage"></a> |
+            | Linux    | x64 (.deb) | <a href="https://github.com/code3-dev/VandCloud/releases/download/${{ env.TAG_NAME }}/vandcloud.deb"><img src="https://img.shields.io/badge/Linux-.deb-FCC624?style=for-the-badge&logo=debian&logoColor=white" alt="Linux .deb"></a> |
+            | Linux    | x64 (.rpm) | <a href="https://github.com/code3-dev/VandCloud/releases/download/${{ env.TAG_NAME }}/vandcloud.rpm"><img src="https://img.shields.io/badge/Linux-.rpm-FCC624?style=for-the-badge&logo=redhat&logoColor=white" alt="Linux .rpm"></a> |

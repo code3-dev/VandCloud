@@ -1,0 +1,9 @@
+Package: vandcloud
+Version: 1.0.0
+Section: utils
+Priority: optional
+Architecture: amd64
+Depends: libgtk-3-0, liblzma5
+Maintainer: Hossein Pira <h3dev.pira@gmail.com>
+Description: Cross-Platform Host Checking Application.
+Homepage: https://github.com/code3-dev/VandCloud

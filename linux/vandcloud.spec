@@ -1,5 +1,5 @@
 Name: vandcloud
-Version: 1.0.0
+Version: 1.0.1
 Release: 1
 Summary: VandCloud
 
@@ -63,5 +63,5 @@ cp icons/vandcloud.png %{buildroot}/%{_datadir}/icons/hicolor/256x256/apps/vandc
 %{_datadir}/icons/hicolor/512x512/apps/vandcloud.png
 
 %changelog
-* Thu Oct 16 2025 Hossein Pira <h3dev.pira@gmail.com> - 1.0.0-1
+* Thu Oct 16 2025 Hossein Pira <h3dev.pira@gmail.com> - 1.0.1-2
 - Initial release

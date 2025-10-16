@@ -297,7 +297,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                       ),
                       const SizedBox(height: 16),
                       Text(
-                        'Development by Hossein Pira',
+                        'Developed by Hossein Pira',
                         style: Theme.of(context).textTheme.titleLarge?.copyWith(
                           fontWeight: FontWeight.bold,
                         ),

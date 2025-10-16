@@ -290,7 +290,7 @@ jobs:
           name: linux-build
           path: |
             release/VandCloud-linux.tar.gz
-            release/VandCloud-*
+            release/VandCloud-*-linux.AppImage
             release/vandcloud.deb
             release/vandcloud.rpm
 
@@ -414,7 +414,7 @@ jobs:
             VandCloud-windows-installer.zip
             VandCloud-windows-portable.zip
             VandCloud-linux.tar.gz
-            VandCloud-*
+            VandCloud-*-linux.AppImage
             vandcloud.deb
             vandcloud.rpm
             VandCloud-ios.zip

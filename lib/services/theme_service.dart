@@ -49,7 +49,10 @@ class ThemeService {
   }
 
   // Get theme data based on selected theme and system brightness
-  static ThemeData getThemeData(AppTheme theme, {Brightness? systemBrightness}) {
+  static ThemeData getThemeData(
+    AppTheme theme, {
+    Brightness? systemBrightness,
+  }) {
     switch (theme) {
       case AppTheme.light:
         return _buildLightTheme();
@@ -59,7 +62,9 @@ class ThemeService {
       default:
         // Use system brightness to determine theme
         final brightness = systemBrightness ?? Brightness.light;
-        return brightness == Brightness.dark ? _buildDarkTheme() : _buildLightTheme();
+        return brightness == Brightness.dark
+            ? _buildDarkTheme()
+            : _buildLightTheme();
     }
   }
 

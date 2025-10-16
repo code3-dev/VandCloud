@@ -32,6 +32,12 @@ class _HomeScreenState extends State<HomeScreen> {
 
   Future<void> _loadCategories() async {
     try {
+      // Reset loading state and error message when retrying
+      setState(() {
+        _isLoading = true;
+        _errorMessage = '';
+      });
+
       final categories = await CategoryService().fetchCategories();
 
       // Add "All" category at the beginning of the list

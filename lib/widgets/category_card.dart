@@ -20,7 +20,6 @@ class CategoryCard extends StatelessWidget {
     final titleColor = isDarkMode
         ? Colors.white
         : Theme.of(context).primaryColor;
-    final descriptionColor = isDarkMode ? Colors.grey[400] : Colors.grey[700];
 
     return Container(
       decoration: BoxDecoration(

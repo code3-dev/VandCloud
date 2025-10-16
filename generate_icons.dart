@@ -104,9 +104,23 @@ Future<void> _generateAndroidIcons(img.Image sourceImage) async {
 Future<void> _generateIOSIcons(img.Image sourceImage) async {
   print('Generating iOS icons...');
   
-  // iOS icon sizes
-  final List<int> iosSizes = [
-    20, 29, 40, 58, 60, 76, 80, 87, 120, 152, 167, 180, 1024
+  // iOS icon specifications with exact names and sizes
+  final List<Map<String, dynamic>> iosIcons = [
+    {'name': 'Icon-App-20x20@1x.png', 'size': 20, 'scale': 1},
+    {'name': 'Icon-App-20x20@2x.png', 'size': 40, 'scale': 2}, // 20 * 2
+    {'name': 'Icon-App-20x20@3x.png', 'size': 60, 'scale': 3}, // 20 * 3
+    {'name': 'Icon-App-29x29@1x.png', 'size': 29, 'scale': 1},
+    {'name': 'Icon-App-29x29@2x.png', 'size': 58, 'scale': 2}, // 29 * 2
+    {'name': 'Icon-App-29x29@3x.png', 'size': 87, 'scale': 3}, // 29 * 3
+    {'name': 'Icon-App-40x40@1x.png', 'size': 40, 'scale': 1},
+    {'name': 'Icon-App-40x40@2x.png', 'size': 80, 'scale': 2}, // 40 * 2
+    {'name': 'Icon-App-40x40@3x.png', 'size': 120, 'scale': 3}, // 40 * 3
+    {'name': 'Icon-App-60x60@2x.png', 'size': 120, 'scale': 2}, // 60 * 2
+    {'name': 'Icon-App-60x60@3x.png', 'size': 180, 'scale': 3}, // 60 * 3
+    {'name': 'Icon-App-76x76@1x.png', 'size': 76, 'scale': 1},
+    {'name': 'Icon-App-76x76@2x.png', 'size': 152, 'scale': 2}, // 76 * 2
+    {'name': 'Icon-App-83.5x83.5@2x.png', 'size': 167, 'scale': 2}, // 83.5 * 2
+    {'name': 'Icon-App-1024x1024@1x.png', 'size': 1024, 'scale': 1},
   ];
   
   // Create iOS AppIcon.appiconset directory
@@ -116,15 +130,153 @@ Future<void> _generateIOSIcons(img.Image sourceImage) async {
   }
   
   // Generate icons
-  for (final size in iosSizes) {
+  for (final icon in iosIcons) {
+    final String name = icon['name'];
+    final int size = icon['size'];
+    
     final img.Image resizedImage = img.copyResize(sourceImage, width: size, height: size);
     final Uint8List pngBytes = img.encodePng(resizedImage);
-    final File iconFile = File('${iosDir.path}/Icon-$size.png');
+    final File iconFile = File('${iosDir.path}/$name');
     await iconFile.writeAsBytes(pngBytes);
     print('Generated ${iconFile.path}');
   }
   
+  // Generate Contents.json for iOS
+  await _generateIOSContentsJson();
+  
   print('iOS icons generated successfully');
+}
+
+// Generate Contents.json for iOS
+Future<void> _generateIOSContentsJson() async {
+  final String contentsJson = '''
+{
+  "images": [
+    {
+      "size": "20x20",
+      "idiom": "iphone",
+      "filename": "Icon-App-20x20@2x.png",
+      "scale": "2x"
+    },
+    {
+      "size": "20x20",
+      "idiom": "iphone",
+      "filename": "Icon-App-20x20@3x.png",
+      "scale": "3x"
+    },
+    {
+      "size": "29x29",
+      "idiom": "iphone",
+      "filename": "Icon-App-29x29@1x.png",
+      "scale": "1x"
+    },
+    {
+      "size": "29x29",
+      "idiom": "iphone",
+      "filename": "Icon-App-29x29@2x.png",
+      "scale": "2x"
+    },
+    {
+      "size": "29x29",
+      "idiom": "iphone",
+      "filename": "Icon-App-29x29@3x.png",
+      "scale": "3x"
+    },
+    {
+      "size": "40x40",
+      "idiom": "iphone",
+      "filename": "Icon-App-40x40@2x.png",
+      "scale": "2x"
+    },
+    {
+      "size": "40x40",
+      "idiom": "iphone",
+      "filename": "Icon-App-40x40@3x.png",
+      "scale": "3x"
+    },
+    {
+      "size": "60x60",
+      "idiom": "iphone",
+      "filename": "Icon-App-60x60@2x.png",
+      "scale": "2x"
+    },
+    {
+      "size": "60x60",
+      "idiom": "iphone",
+      "filename": "Icon-App-60x60@3x.png",
+      "scale": "3x"
+    },
+    {
+      "size": "20x20",
+      "idiom": "ipad",
+      "filename": "Icon-App-20x20@1x.png",
+      "scale": "1x"
+    },
+    {
+      "size": "20x20",
+      "idiom": "ipad",
+      "filename": "Icon-App-20x20@2x.png",
+      "scale": "2x"
+    },
+    {
+      "size": "29x29",
+      "idiom": "ipad",
+      "filename": "Icon-App-29x29@1x.png",
+      "scale": "1x"
+    },
+    {
+      "size": "29x29",
+      "idiom": "ipad",
+      "filename": "Icon-App-29x29@2x.png",
+      "scale": "2x"
+    },
+    {
+      "size": "40x40",
+      "idiom": "ipad",
+      "filename": "Icon-App-40x40@1x.png",
+      "scale": "1x"
+    },
+    {
+      "size": "40x40",
+      "idiom": "ipad",
+      "filename": "Icon-App-40x40@2x.png",
+      "scale": "2x"
+    },
+    {
+      "size": "76x76",
+      "idiom": "ipad",
+      "filename": "Icon-App-76x76@1x.png",
+      "scale": "1x"
+    },
+    {
+      "size": "76x76",
+      "idiom": "ipad",
+      "filename": "Icon-App-76x76@2x.png",
+      "scale": "2x"
+    },
+    {
+      "size": "83.5x83.5",
+      "idiom": "ipad",
+      "filename": "Icon-App-83.5x83.5@2x.png",
+      "scale": "2x"
+    },
+    {
+      "size": "1024x1024",
+      "idiom": "ios-marketing",
+      "filename": "Icon-App-1024x1024@1x.png",
+      "scale": "1x"
+    }
+  ],
+  "info": {
+    "version": 1,
+    "author": "xcode"
+  }
+}
+''';
+  
+  final File contentsFile = File('ios/Runner/Assets.xcassets/AppIcon.appiconset/Contents.json');
+  await contentsFile.writeAsString(contentsJson);
+  print('Generated ${contentsFile.path}');
 }
 
 // Generate icons for Web

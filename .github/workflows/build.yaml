@@ -395,6 +395,9 @@ jobs:
           else
             echo "TAG_NAME=${GITHUB_REF#refs/tags/}" >> $GITHUB_ENV
           fi
+          # Extract version from pubspec.yaml
+          VERSION=$(grep '^version:' pubspec.yaml | cut -d ':' -f 2 | tr -d ' ')
+          echo "VERSION=$VERSION" >> $GITHUB_ENV
         shell: bash
 
       - name: Create Release
@@ -434,7 +437,7 @@ jobs:
             | Windows  | x64 (ZIP - Installer) | <a href="https://github.com/code3-dev/VandCloud/releases/download/${{ env.TAG_NAME }}/VandCloud-windows-installer.zip"><img src="https://img.shields.io/badge/Windows-ZIP--Installer-0078D6?style=for-the-badge&logo=windows&logoColor=white" alt="Windows ZIP Installer"></a> |
             | Windows  | x64 (Portable ZIP) | <a href="https://github.com/code3-dev/VandCloud/releases/download/${{ env.TAG_NAME }}/VandCloud-windows-portable.zip"><img src="https://img.shields.io/badge/Windows-Portable--ZIP-0078D6?style=for-the-badge&logo=windows&logoColor=white" alt="Windows Portable ZIP"></a> |
             | Linux    | x64 (tar.gz) | <a href="https://github.com/code3-dev/VandCloud/releases/download/${{ env.TAG_NAME }}/VandCloud-linux.tar.gz"><img src="https://img.shields.io/badge/Linux-tar.gz-FCC624?style=for-the-badge&logo=linux&logoColor=black" alt="Linux tar.gz"></a> |
-            | Linux    | x64 (AppImage) | <a href="https://github.com/code3-dev/VandCloud/releases/download/${{ env.TAG_NAME }}/VandCloud-*"><img src="https://img.shields.io/badge/Linux-AppImage-FCC624?style=for-the-badge&logo=linux&logoColor=black" alt="Linux AppImage"></a> |
+            | Linux    | x64 (AppImage) | <a href="https://github.com/code3-dev/VandCloud/releases/download/${{ env.TAG_NAME }}/VandCloud-${{ env.VERSION }}-linux.AppImage"><img src="https://img.shields.io/badge/Linux-AppImage-FCC624?style=for-the-badge&logo=linux&logoColor=black" alt="Linux AppImage"></a> |
             | Linux    | x64 (.deb) | <a href="https://github.com/code3-dev/VandCloud/releases/download/${{ env.TAG_NAME }}/vandcloud.deb"><img src="https://img.shields.io/badge/Linux-.deb-FCC624?style=for-the-badge&logo=debian&logoColor=white" alt="Linux .deb"></a> |
             | Linux    | x64 (.rpm) | <a href="https://github.com/code3-dev/VandCloud/releases/download/${{ env.TAG_NAME }}/vandcloud.rpm"><img src="https://img.shields.io/badge/Linux-.rpm-FCC624?style=for-the-badge&logo=redhat&logoColor=white" alt="Linux .rpm"></a> |
             | iOS      | Universal (ZIP) | <a href="https://github.com/code3-dev/VandCloud/releases/download/${{ env.TAG_NAME }}/VandCloud-ios.zip"><img src="https://img.shields.io/badge/iOS-ZIP-FCC624?style=for-the-badge&logo=apple&logoColor=white" alt="iOS ZIP"></a> |

@@ -311,27 +311,46 @@ jobs:
       - name: Build iOS
         run: flutter build ios --release --no-codesign
 
+      - name: Debug iOS build structure
+        run: |
+          echo "Current directory: $(pwd)"
+          echo "Build directory contents:"
+          ls -la build/ || echo "Build directory not found"
+          echo "iOS build directory contents:"
+          find build -type d -name "iphoneos" | xargs -I {} sh -c 'echo "Directory: {}" && ls -la "{}"' || echo "No iphoneos directory found"
+          echo "Runner.app location:"
+          find build -name "Runner.app" -type d | head -5 || echo "Runner.app not found"
+
       - name: Package iOS build
         run: |
-          mkdir -p release
-          cd build/ios/iphoneos
+          # Ensure release directory exists in the workspace root
+          mkdir -p ${{ github.workspace }}/release
+          
+          # Check if Runner.app exists
+          if [ ! -d "${{ github.workspace }}/build/ios/iphoneos/Runner.app" ]; then
+            echo "Runner.app not found. Listing build directory:"
+            find ${{ github.workspace }}/build -name "*.app" -type d | head -10 || echo "No .app files found"
+            exit 1
+          fi
           
           # Create ZIP file (existing method)
-          mkdir Payload
+          cd ${{ github.workspace }}/build/ios/iphoneos
+          mkdir -p Payload
           cp -r Runner.app Payload/
-          zip -r release/VandCloud-ios.zip Payload
+          zip -r ${{ github.workspace }}/release/VandCloud-ios.zip Payload
           
           # Create IPA file (new method)
-          # Create a temporary directory for IPA structure
-          mkdir -p ../temp_ipa
-          cd ../temp_ipa
-          
-          # Create the Payload directory and copy the app
-          mkdir Payload
-          cp -r ../iphoneos/Runner.app Payload/
+          # Create the Payload directory for IPA
+          mkdir -p ${{ github.workspace }}/temp_ipa/Payload
+          cp -r Runner.app ${{ github.workspace }}/temp_ipa/Payload/
           
           # Create the IPA file by zipping with .ipa extension
-          zip -r ../release/VandCloud.ipa Payload
+          cd ${{ github.workspace }}/temp_ipa
+          zip -r ${{ github.workspace }}/release/VandCloud.ipa Payload
+          
+          # Clean up temporary directories
+          rm -rf ${{ github.workspace }}/temp_ipa
+          rm -rf ${{ github.workspace }}/build/ios/iphoneos/Payload
 
       - name: Upload iOS artifacts
         uses: actions/upload-artifact@v4

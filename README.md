@@ -61,6 +61,10 @@ Download the iOS files from the [releases page](https://github.com/code3-dev/Van
 - Flutter SDK
 - Android Studio / VS Code
 - Android SDK / Xcode (for mobile development)
+- Desktop Development Tools:
+  - **Windows**: Visual Studio 2022 or Visual Studio Build Tools with C++ development tools
+  - **Linux**: GCC, CMake, Ninja build system
+  - **macOS**: Xcode command line tools
 
 ### Getting Started
 ```bash
@@ -75,7 +79,153 @@ flutter pub get
 
 # Run the app
 flutter run
+
+# For desktop builds:
+# Windows: Ensure Visual Studio or C++ Build Tools are installed
+# Linux: Install build dependencies with: sudo apt-get install clang cmake ninja-build pkg-config libgtk-3-dev
+# macOS: Ensure Xcode command line tools are installed
 ```
+
+### Build Commands
+
+#### Android
+```bash
+# Build APK for all architectures
+flutter build apk
+
+# Build split APKs for each architecture
+flutter build apk --split-per-abi
+
+# Build app bundle for Play Store
+flutter build appbundle
+```
+
+#### iOS
+```bash
+# Build for iOS simulator
+flutter build ios --simulator
+
+# Build for iOS device (requires code signing)
+flutter build ios --release
+
+# Build without code signing for manual distribution
+flutter build ios --release --no-codesign
+```
+
+#### Windows
+```bash
+# Build Windows desktop application
+flutter build windows
+
+# Build Windows installer (requires Inno Setup)
+cd windows/installer
+iscc VandCloud.iss
+```
+
+#### Linux
+```bash
+# Build Linux desktop application
+flutter build linux
+
+# Install packaging dependencies (Ubuntu/Debian)
+sudo apt-get install rpm ruby ruby-dev rubygems build-essential
+
+# Create DEB and RPM packages
+# (This is handled automatically in the CI/CD pipeline)
+```
+
+#### macOS
+```bash
+# Build for macOS (currently in development)
+flutter build macos
+```
+
+### GitHub Actions Build Setup
+
+To set up GitHub Actions for building and releasing your forked version of VandCloud:
+
+1. **Fork and Clone Your Fork**
+   ```bash
+   # Fork the repository on GitHub, then clone your fork
+   git clone https://github.com/YOUR_USERNAME/VandCloud.git
+   cd VandCloud
+   ```
+
+2. **Create Android Keystore**
+   ```bash
+   # Generate a new keystore for Android signing (examples for different OS)
+   
+   # On Windows
+   keytool -genkey -v -keystore ~/vand.jks -keyalg RSA -keysize 2048 -validity 10000 -alias vandcloud
+   
+   # On macOS
+   keytool -genkey -v -keystore ~/vand.jks -keyalg RSA -keysize 2048 -validity 10000 -alias vandcloud
+   
+   # On Linux
+   keytool -genkey -v -keystore ~/vand.jks -keyalg RSA -keysize 2048 -validity 10000 -alias vandcloud
+   ```
+   
+   When prompted, enter the following information:
+   - First and Last Name: `Hossein Pira`
+   - Organizational Unit: `VandCloud`
+   - Organization: `IRDevs`
+   - City: `New York`
+   - State: `New York`
+   - Country: `US`
+   - Confirm: `yes`
+
+3. **Convert Keystore to Base64**
+   ```bash
+   # On Windows (PowerShell)
+   [convert]::ToBase64String((Get-Content -Path "vand.jks" -AsByteStream -Raw)) | Out-File -Encoding ascii "vand.base64"
+   
+   # On macOS/Linux
+   base64 -i vand.jks -o vand.base64
+   
+   # Alternative for older Linux systems
+   base64 vand.jks > vand.base64
+   ```
+
+4. **Add Secrets to GitHub Repository**
+   
+   Go to your GitHub repository settings → Secrets and variables → Actions, and add the following secrets:
+   
+   | Secret Name | Value |
+   |-------------|-------|
+   | `KEY_STORE` | Content of the base64 encoded keystore file |
+   | `KEY_STORE_PASSWORD` | Keystore password |
+   | `KEY_PASSWORD` | Key password |
+   | `KEY_ALIAS` | Key alias (vandcloud) |
+
+5. **GitHub Actions Workflow**
+   
+   The workflow will automatically use these secrets to sign Android builds. The relevant section in the workflow looks like this:
+   
+   ```yaml
+   - name: Decode Keystore
+     run: |
+       $bytes = [System.Convert]::FromBase64String("${{ secrets.KEY_STORE }}")
+       [IO.File]::WriteAllBytes("android/app/keystore.jks", $bytes)
+     shell: powershell
+
+   - name: Create keystore properties file
+     run: |
+       echo storePassword=${{ secrets.KEY_STORE_PASSWORD }} > android/key.properties
+       echo keyPassword=${{ secrets.KEY_PASSWORD }} >> android/key.properties
+       echo keyAlias=${{ secrets.KEY_ALIAS }} >> android/key.properties
+       echo storeFile=keystore.jks >> android/key.properties
+     shell: bash
+   ```
+
+6. **Push Changes and Trigger Build**
+   ```bash
+   # Make your code changes
+   git add .
+   git commit -m "Your changes"
+   git push origin main
+   ```
+   
+   This will trigger the GitHub Actions workflow to build and release your version.
 
 ## 🤝 Contributing
 

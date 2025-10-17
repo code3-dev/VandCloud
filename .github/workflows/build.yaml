@@ -85,7 +85,7 @@ jobs:
         run: flutter pub get
 
       - name: Build Windows (${{ matrix.architecture }})
-        run: flutter build windows --release --target-platform windows-${{ matrix.architecture }}
+        run: flutter build windows --release
 
       - name: Install Inno Setup
         run: |

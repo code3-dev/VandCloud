@@ -483,10 +483,7 @@ class _ApiItemsScreenState extends State<ApiItemsScreen> {
                 },
               ),
               onTap: () {
-                // Handle item tap - show details or test the item
-                ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(content: Text('Tapped on ${item.name}')),
-                );
+                _showItemOptionsModal(context, item);
               },
             ),
           );

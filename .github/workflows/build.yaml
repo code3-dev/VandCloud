@@ -69,6 +69,9 @@ jobs:
 
   build-windows:
     runs-on: windows-latest
+    strategy:
+      matrix:
+        architecture: [x64, x86]
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -81,8 +84,8 @@ jobs:
       - name: Get dependencies
         run: flutter pub get
 
-      - name: Build Windows
-        run: flutter build windows --release
+      - name: Build Windows (${{ matrix.architecture }})
+        run: flutter build windows --release --target-platform windows-${{ matrix.architecture }}
 
       - name: Install Inno Setup
         run: |
@@ -104,25 +107,87 @@ jobs:
       - name: Create Windows ZIP (Installer)
         run: |
           cd release
-          7z a -tzip VandCloud-windows-installer.zip VandCloud-setup.exe
+          7z a -tzip VandCloud-windows-${{ matrix.architecture }}-installer.zip VandCloud-setup.exe
         shell: cmd
 
       - name: Create Windows Portable ZIP
         run: |
           mkdir -p release\portable
-          xcopy build\windows\x64\runner\Release\* release\portable\ /E /I
+          xcopy build\windows\${{ matrix.architecture }}\runner\Release\* release\portable\ /E /I
           cd release
-          7z a -tzip VandCloud-windows-portable.zip portable\
+          7z a -tzip VandCloud-windows-${{ matrix.architecture }}-portable.zip portable\
         shell: cmd
 
       - name: Upload Windows artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: windows-build
+          name: windows-build-${{ matrix.architecture }}
           path: |
             release/VandCloud-setup.exe
-            release/VandCloud-windows-installer.zip
-            release/VandCloud-windows-portable.zip
+            release/VandCloud-windows-${{ matrix.architecture }}-installer.zip
+            release/VandCloud-windows-${{ matrix.architecture }}-portable.zip
+
+  build-macos:
+    runs-on: macos-latest
+    strategy:
+      matrix:
+        architecture: [x64, arm64]
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          channel: 'stable'
+
+      - name: Get dependencies
+        run: flutter pub get
+
+      - name: Enable macOS desktop support
+        run: flutter config --enable-macos-desktop
+
+      - name: Build macOS (${{ matrix.architecture }})
+        run: flutter build macos --release --target-platform macos-${{ matrix.architecture }}
+
+      - name: Create DMG
+        run: |
+          # Create a disk image (DMG) for distribution
+          mkdir -p release
+          
+          # Create a temporary directory for the app bundle
+          TEMP_DIR=$(mktemp -d)
+          cp -R build/macos/Build/Products/Release/vandcloud.app "$TEMP_DIR/"
+          
+          # Create the DMG using create-dmg tool
+          brew install create-dmg
+          
+          create-dmg \
+            --volname "VandCloud Installer" \
+            --window-pos 200 120 \
+            --window-size 800 400 \
+            --icon-size 100 \
+            --app-drop-link 600 185 \
+            "release/VandCloud-macos-${{ matrix.architecture }}.dmg" \
+            "$TEMP_DIR/"
+          
+          # Clean up
+          rm -rf "$TEMP_DIR"
+
+      - name: Create ZIP
+        run: |
+          # Create a ZIP archive of the app bundle
+          mkdir -p release
+          cd build/macos/Build/Products/Release
+          zip -r ../../../release/VandCloud-macos-${{ matrix.architecture }}.zip vandcloud.app
+
+      - name: Upload macOS artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: macos-build-${{ matrix.architecture }}
+          path: |
+            release/VandCloud-macos-${{ matrix.architecture }}.dmg
+            release/VandCloud-macos-${{ matrix.architecture }}.zip
 
   build-linux:
     runs-on: ubuntu-latest
@@ -361,7 +426,7 @@ jobs:
             release/VandCloud.ipa
 
   release:
-    needs: [build-android, build-windows, build-linux, build-ios]
+    needs: [build-android, build-windows, build-macos, build-linux, build-ios]
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code
@@ -372,10 +437,25 @@ jobs:
         with:
           name: android-apks
 
-      - name: Download Windows artifacts
+      - name: Download Windows artifacts (x64)
         uses: actions/download-artifact@v4
         with:
-          name: windows-build
+          name: windows-build-x64
+
+      - name: Download Windows artifacts (x86)
+        uses: actions/download-artifact@v4
+        with:
+          name: windows-build-x86
+
+      - name: Download macOS artifacts (x64)
+        uses: actions/download-artifact@v4
+        with:
+          name: macos-build-x64
+
+      - name: Download macOS artifacts (arm64)
+        uses: actions/download-artifact@v4
+        with:
+          name: macos-build-arm64
 
       - name: Download Linux artifacts
         uses: actions/download-artifact@v4
@@ -414,8 +494,14 @@ jobs:
             VandCloud-arm64-v8a.apk
             VandCloud-x86_64.apk
             VandCloud-setup.exe
-            VandCloud-windows-installer.zip
-            VandCloud-windows-portable.zip
+            VandCloud-windows-x64-installer.zip
+            VandCloud-windows-x64-portable.zip
+            VandCloud-windows-x86-installer.zip
+            VandCloud-windows-x86-portable.zip
+            VandCloud-macos-x64.dmg
+            VandCloud-macos-x64.zip
+            VandCloud-macos-arm64.dmg
+            VandCloud-macos-arm64.zip
             VandCloud-linux.tar.gz
             VandCloud-*-linux.AppImage
             vandcloud.deb
@@ -434,8 +520,14 @@ jobs:
             | Android  | arm64-v8a   | <a href="https://github.com/code3-dev/VandCloud/releases/download/${{ env.TAG_NAME }}/VandCloud-arm64-v8a.apk"><img src="https://img.shields.io/badge/Android-arm64--v8a-3DDC84?style=for-the-badge&logo=android&logoColor=white" alt="Android arm64-v8a"></a> |
             | Android  | x86_64      | <a href="https://github.com/code3-dev/VandCloud/releases/download/${{ env.TAG_NAME }}/VandCloud-x86_64.apk"><img src="https://img.shields.io/badge/Android-x86_64-3DDC84?style=for-the-badge&logo=android&logoColor=white" alt="Android x86_64"></a> |
             | Windows  | x64 (Installer) | <a href="https://github.com/code3-dev/VandCloud/releases/download/${{ env.TAG_NAME }}/VandCloud-setup.exe"><img src="https://img.shields.io/badge/Windows-Installer-0078D6?style=for-the-badge&logo=windows&logoColor=white" alt="Windows Installer"></a> |
-            | Windows  | x64 (ZIP - Installer) | <a href="https://github.com/code3-dev/VandCloud/releases/download/${{ env.TAG_NAME }}/VandCloud-windows-installer.zip"><img src="https://img.shields.io/badge/Windows-ZIP--Installer-0078D6?style=for-the-badge&logo=windows&logoColor=white" alt="Windows ZIP Installer"></a> |
-            | Windows  | x64 (Portable ZIP) | <a href="https://github.com/code3-dev/VandCloud/releases/download/${{ env.TAG_NAME }}/VandCloud-windows-portable.zip"><img src="https://img.shields.io/badge/Windows-Portable--ZIP-0078D6?style=for-the-badge&logo=windows&logoColor=white" alt="Windows Portable ZIP"></a> |
+            | Windows  | x64 (ZIP - Installer) | <a href="https://github.com/code3-dev/VandCloud/releases/download/${{ env.TAG_NAME }}/VandCloud-windows-x64-installer.zip"><img src="https://img.shields.io/badge/Windows-x64--ZIP--Installer-0078D6?style=for-the-badge&logo=windows&logoColor=white" alt="Windows x64 ZIP Installer"></a> |
+            | Windows  | x64 (Portable ZIP) | <a href="https://github.com/code3-dev/VandCloud/releases/download/${{ env.TAG_NAME }}/VandCloud-windows-x64-portable.zip"><img src="https://img.shields.io/badge/Windows-x64--Portable--ZIP-0078D6?style=for-the-badge&logo=windows&logoColor=white" alt="Windows x64 Portable ZIP"></a> |
+            | Windows  | x86 (Installer) | <a href="https://github.com/code3-dev/VandCloud/releases/download/${{ env.TAG_NAME }}/VandCloud-windows-x86-installer.zip"><img src="https://img.shields.io/badge/Windows-x86--Installer-0078D6?style=for-the-badge&logo=windows&logoColor=white" alt="Windows x86 Installer"></a> |
+            | Windows  | x86 (Portable ZIP) | <a href="https://github.com/code3-dev/VandCloud/releases/download/${{ env.TAG_NAME }}/VandCloud-windows-x86-portable.zip"><img src="https://img.shields.io/badge/Windows-x86--Portable--ZIP-0078D6?style=for-the-badge&logo=windows&logoColor=white" alt="Windows x86 Portable ZIP"></a> |
+            | macOS    | Intel (x64) (.dmg) | <a href="https://github.com/code3-dev/VandCloud/releases/download/${{ env.TAG_NAME }}/VandCloud-macos-x64.dmg"><img src="https://img.shields.io/badge/macOS-Intel(x64)--DMG-000000?style=for-the-badge&logo=apple&logoColor=white" alt="macOS Intel (x64) DMG"></a> |
+            | macOS    | Intel (x64) (.zip) | <a href="https://github.com/code3-dev/VandCloud/releases/download/${{ env.TAG_NAME }}/VandCloud-macos-x64.zip"><img src="https://img.shields.io/badge/macOS-Intel(x64)--ZIP-000000?style=for-the-badge&logo=apple&logoColor=white" alt="macOS Intel (x64) ZIP"></a> |
+            | macOS    | Apple Silicon (arm64) (.dmg) | <a href="https://github.com/code3-dev/VandCloud/releases/download/${{ env.TAG_NAME }}/VandCloud-macos-arm64.dmg"><img src="https://img.shields.io/badge/macOS-AppleSilicon(arm64)--DMG-000000?style=for-the-badge&logo=apple&logoColor=white" alt="macOS Apple Silicon (arm64) DMG"></a> |
+            | macOS    | Apple Silicon (arm64) (.zip) | <a href="https://github.com/code3-dev/VandCloud/releases/download/${{ env.TAG_NAME }}/VandCloud-macos-arm64.zip"><img src="https://img.shields.io/badge/macOS-AppleSilicon(arm64)--ZIP-000000?style=for-the-badge&logo=apple&logoColor=white" alt="macOS Apple Silicon (arm64) ZIP"></a> |
             | Linux    | x64 (tar.gz) | <a href="https://github.com/code3-dev/VandCloud/releases/download/${{ env.TAG_NAME }}/VandCloud-linux.tar.gz"><img src="https://img.shields.io/badge/Linux-tar.gz-FCC624?style=for-the-badge&logo=linux&logoColor=black" alt="Linux tar.gz"></a> |
             | Linux    | x64 (AppImage) | <a href="https://github.com/code3-dev/VandCloud/releases/download/${{ env.TAG_NAME }}/VandCloud-${{ env.VERSION }}-linux.AppImage"><img src="https://img.shields.io/badge/Linux-AppImage-FCC624?style=for-the-badge&logo=linux&logoColor=black" alt="Linux AppImage"></a> |
             | Linux    | x64 (.deb) | <a href="https://github.com/code3-dev/VandCloud/releases/download/${{ env.TAG_NAME }}/vandcloud.deb"><img src="https://img.shields.io/badge/Linux-.deb-FCC624?style=for-the-badge&logo=debian&logoColor=white" alt="Linux .deb"></a> |

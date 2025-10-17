@@ -28,7 +28,7 @@
 | Windows | ✅ Supported | [Installer](https://github.com/code3-dev/VandCloud/releases) |
 | Linux | ✅ Supported | [Packages](https://github.com/code3-dev/VandCloud/releases) |
 | iOS | ✅ Supported | [IPA Releases](https://github.com/code3-dev/VandCloud/releases) |
-| macOS | ⏳ Planned | - |
+| macOS | ✅ Supported | [Packages](https://github.com/code3-dev/VandCloud/releases) |
 | Web | ⏳ Planned | - |
 
 ## 🚀 Installation
@@ -54,6 +54,11 @@ Download the appropriate package for your distribution from the [releases page](
 Download the iOS files from the [releases page](https://github.com/code3-dev/VandCloud/releases):
 - **IPA File** - Standard iOS package format (requires sideloading)
 - **ZIP File** - Alternative format containing the app bundle
+
+### macOS
+Download the macOS package from the [releases page](https://github.com/code3-dev/VandCloud/releases):
+- **DMG Installer** - Standard macOS installer package
+- **ZIP Package** - Portable version for manual installation
 
 ## 🛠️ Development
 
@@ -136,7 +141,7 @@ sudo apt-get install rpm ruby ruby-dev rubygems build-essential
 
 #### macOS
 ```bash
-# Build for macOS (currently in development)
+# Build macOS desktop application
 flutter build macos
 ```
 

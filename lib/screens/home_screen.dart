@@ -284,6 +284,13 @@ class _HomeScreenState extends State<HomeScreen> {
         title: const Text('VandCloud'),
         backgroundColor: Theme.of(context).primaryColor,
         foregroundColor: Colors.white,
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.add_circle_outline),
+            onPressed: _addCustomCategory,
+            tooltip: 'Add Category',
+          ),
+        ],
       ),
       body: _buildBodyContent(1), // 1 column for mobile
       bottomNavigationBar: BottomNavigationBar(
@@ -297,10 +304,6 @@ class _HomeScreenState extends State<HomeScreen> {
           ),
         ],
       ),
-      floatingActionButton: FloatingActionButton(
-        onPressed: _addCustomCategory,
-        child: const Icon(Icons.add),
-      ),
     );
   }
 
@@ -310,6 +313,13 @@ class _HomeScreenState extends State<HomeScreen> {
         title: const Text('VandCloud'),
         backgroundColor: Theme.of(context).primaryColor,
         foregroundColor: Colors.white,
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.add_circle_outline),
+            onPressed: _addCustomCategory,
+            tooltip: 'Add Category',
+          ),
+        ],
       ),
       body: Row(
         children: [
@@ -340,6 +350,13 @@ class _HomeScreenState extends State<HomeScreen> {
                   title: const Text('VandCloud'),
                   backgroundColor: Theme.of(context).primaryColor,
                   foregroundColor: Colors.white,
+                  actions: [
+                    IconButton(
+                      icon: const Icon(Icons.add_circle_outline),
+                      onPressed: _addCustomCategory,
+                      tooltip: 'Add Category',
+                    ),
+                  ],
                 ),
                 Expanded(
                   child: _buildBodyContent(4), // 4 columns for desktop

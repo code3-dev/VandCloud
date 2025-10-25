@@ -13,7 +13,7 @@
 
 ## 🌟 Features
 
-- **Multi-Platform Support** - Available for Android, Windows, Linux, and iOS
+- **Multi-Platform Support** - Available for Android, Windows, Linux, and macOS
 - **Categorized API Directory** - Organized collection of APIs and services
 - **Real-Time Status Checking** - Test host availability with ping measurements
 - **Responsive Design** - Optimized for mobile, tablet, desktop, and TV
@@ -27,7 +27,6 @@
 | Android | ✅ Supported | [APK Releases](https://github.com/code3-dev/VandCloud/releases) |
 | Windows | ✅ Supported | [Installer](https://github.com/code3-dev/VandCloud/releases) |
 | Linux | ✅ Supported | [Packages](https://github.com/code3-dev/VandCloud/releases) |
-| iOS | ✅ Supported | [IPA Releases](https://github.com/code3-dev/VandCloud/releases) |
 | macOS | ✅ Supported | [Packages](https://github.com/code3-dev/VandCloud/releases) |
 | Web | ⏳ Planned | - |
 
@@ -50,11 +49,6 @@ Download the appropriate package for your distribution from the [releases page](
 - **AppImage** - Universal Linux package that runs on most distributions
 - **Tar.gz Archive** - Portable version for manual installation
 
-### iOS
-Download the iOS files from the [releases page](https://github.com/code3-dev/VandCloud/releases):
-- **IPA File** - Standard iOS package format (requires sideloading)
-- **ZIP File** - Alternative format containing the app bundle
-
 ### macOS
 Download the macOS package from the [releases page](https://github.com/code3-dev/VandCloud/releases):
 - **DMG Installer** - Standard macOS installer package
@@ -65,7 +59,7 @@ Download the macOS package from the [releases page](https://github.com/code3-dev
 ### Prerequisites
 - Flutter SDK
 - Android Studio / VS Code
-- Android SDK / Xcode (for mobile development)
+- Android SDK (for mobile development)
 - Desktop Development Tools:
   - **Windows**: Visual Studio 2022 or Visual Studio Build Tools with C++ development tools
   - **Linux**: GCC, CMake, Ninja build system
@@ -103,18 +97,6 @@ flutter build apk --split-per-abi
 
 # Build app bundle for Play Store
 flutter build appbundle
-```
-
-#### iOS
-```bash
-# Build for iOS simulator
-flutter build ios --simulator
-
-# Build for iOS device (requires code signing)
-flutter build ios --release
-
-# Build without code signing for manual distribution
-flutter build ios --release --no-codesign
 ```
 
 #### Windows

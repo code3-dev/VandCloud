@@ -145,7 +145,7 @@ jobs:
         run: flutter config --enable-macos-desktop
 
       - name: Build macOS
-        run: flutter build macos --release
+        run: flutter build macos --release --no-tree-shake-icons
 
       - name: Create Universal Binary
         run: |
@@ -356,74 +356,10 @@ jobs:
             release/vandcloud.deb
             release/vandcloud.rpm
 
-  build-ios:
-    runs-on: macos-latest
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
 
-      - name: Set up Flutter
-        uses: subosito/flutter-action@v2
-        with:
-          channel: 'stable'
-
-      - name: Get dependencies
-        run: flutter pub get
-
-      - name: Build iOS
-        run: flutter build ios --release --no-codesign
-
-      - name: Debug iOS build structure
-        run: |
-          echo "Current directory: $(pwd)"
-          echo "Build directory contents:"
-          ls -la build/ || echo "Build directory not found"
-          echo "iOS build directory contents:"
-          find build -type d -name "iphoneos" | xargs -I {} sh -c 'echo "Directory: {}" && ls -la "{}"' || echo "No iphoneos directory found"
-          echo "Runner.app location:"
-          find build -name "Runner.app" -type d | head -5 || echo "Runner.app not found"
-
-      - name: Package iOS build
-        run: |
-          # Ensure release directory exists in the workspace root
-          mkdir -p ${{ github.workspace }}/release
-          
-          # Check if Runner.app exists
-          if [ ! -d "${{ github.workspace }}/build/ios/iphoneos/Runner.app" ]; then
-            echo "Runner.app not found. Listing build directory:"
-            find ${{ github.workspace }}/build -name "*.app" -type d | head -10 || echo "No .app files found"
-            exit 1
-          fi
-          
-          # Create ZIP file (existing method)
-          cd ${{ github.workspace }}/build/ios/iphoneos
-          mkdir -p Payload
-          cp -r Runner.app Payload/
-          zip -r ${{ github.workspace }}/release/VandCloud-ios.zip Payload
-          
-          # Create IPA file (new method)
-          # Create the Payload directory for IPA
-          mkdir -p ${{ github.workspace }}/temp_ipa/Payload
-          cp -r Runner.app ${{ github.workspace }}/temp_ipa/Payload/
-          
-          # Create the IPA file by zipping with .ipa extension
-          cd ${{ github.workspace }}/temp_ipa
-          zip -r ${{ github.workspace }}/release/VandCloud.ipa Payload
-          
-          # Clean up temporary directories
-          rm -rf ${{ github.workspace }}/temp_ipa
-          rm -rf ${{ github.workspace }}/build/ios/iphoneos/Payload
-
-      - name: Upload iOS artifacts
-        uses: actions/upload-artifact@v4
-        with:
-          name: ios-build
-          path: |
-            release/VandCloud-ios.zip
-            release/VandCloud.ipa
 
   release:
-    needs: [build-android, build-windows, build-macos, build-linux, build-ios]
+    needs: [build-android, build-windows, build-macos, build-linux]
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code
@@ -453,11 +389,6 @@ jobs:
         uses: actions/download-artifact@v4
         with:
           name: linux-build
-
-      - name: Download iOS artifacts
-        uses: actions/download-artifact@v4
-        with:
-          name: ios-build
 
       - name: Get tag name
         id: get_tag
@@ -496,8 +427,6 @@ jobs:
             VandCloud-*-linux.AppImage
             vandcloud.deb
             vandcloud.rpm
-            VandCloud-ios.zip
-            VandCloud.ipa
           body: |
             ## Installation
             
@@ -520,5 +449,3 @@ jobs:
             | Linux    | x64 (AppImage) | <a href="https://github.com/code3-dev/VandCloud/releases/download/${{ env.TAG_NAME }}/VandCloud-${{ env.VERSION }}-linux.AppImage"><img src="https://img.shields.io/badge/Linux-AppImage-FCC624?style=for-the-badge&logo=linux&logoColor=black" alt="Linux AppImage"></a> |
             | Linux    | x64 (.deb) | <a href="https://github.com/code3-dev/VandCloud/releases/download/${{ env.TAG_NAME }}/vandcloud.deb"><img src="https://img.shields.io/badge/Linux-.deb-FCC624?style=for-the-badge&logo=debian&logoColor=white" alt="Linux .deb"></a> |
             | Linux    | x64 (.rpm) | <a href="https://github.com/code3-dev/VandCloud/releases/download/${{ env.TAG_NAME }}/vandcloud.rpm"><img src="https://img.shields.io/badge/Linux-.rpm-FCC624?style=for-the-badge&logo=redhat&logoColor=white" alt="Linux .rpm"></a> |
-            | iOS      | Universal (ZIP) | <a href="https://github.com/code3-dev/VandCloud/releases/download/${{ env.TAG_NAME }}/VandCloud-ios.zip"><img src="https://img.shields.io/badge/iOS-ZIP-FCC624?style=for-the-badge&logo=apple&logoColor=white" alt="iOS ZIP"></a> |
-            | iOS      | Universal (IPA) | <a href="https://github.com/code3-dev/VandCloud/releases/download/${{ env.TAG_NAME }}/VandCloud.ipa"><img src="https://img.shields.io/badge/iOS-IPA-FCC624?style=for-the-badge&logo=apple&logoColor=white" alt="iOS IPA"></a> |

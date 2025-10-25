@@ -73,9 +73,59 @@ class Category {
       final fontFamily = parts[1];
       
       // Create IconData based on the code point and font family
-      return IconData(codePoint, fontFamily: fontFamily);
+      // Use a constant constructor when possible to enable tree shaking
+      if (fontFamily == 'MaterialIcons') {
+        // For Material Icons, we can use the Icons class which provides constant IconData
+        // This is a simplified approach - in a real app, you might want to map more icons
+        return _getMaterialIcon(codePoint);
+      } else {
+        // For other font families, we have to create dynamic IconData
+        // This will still cause issues with tree shaking, but we've added --no-tree-shake-icons flag
+        return IconData(codePoint, fontFamily: fontFamily);
+      }
     } catch (e) {
       return null;
+    }
+  }
+  
+  // Helper method to get Material Icons as constants when possible
+  static IconData? _getMaterialIcon(int codePoint) {
+    // This is a simplified mapping - in a production app you might want to map more icons
+    // The key is to use constant IconData from the Icons class when possible
+    switch (codePoint) {
+      case 0xe000: return Icons.add;
+      case 0xe001: return Icons.apps;
+      case 0xe002: return Icons.api;
+      case 0xe003: return Icons.storage;
+      case 0xe004: return Icons.cloud;
+      case 0xe005: return Icons.network_check;
+      case 0xe006: return Icons.security;
+      case 0xe007: return Icons.build;
+      case 0xe008: return Icons.monitor;
+      case 0xe009: return Icons.code;
+      case 0xe00a: return Icons.people;
+      case 0xe00b: return Icons.search;
+      case 0xe00c: return Icons.settings;
+      case 0xe00d: return Icons.favorite;
+      case 0xe00e: return Icons.home;
+      case 0xe00f: return Icons.business;
+      case 0xe010: return Icons.shopping_cart;
+      case 0xe011: return Icons.school;
+      case 0xe012: return Icons.directions_car;
+      case 0xe013: return Icons.local_hospital;
+      case 0xe014: return Icons.restaurant;
+      case 0xe015: return Icons.music_note;
+      case 0xe016: return Icons.videogame_asset;
+      case 0xe017: return Icons.camera;
+      case 0xe018: return Icons.phone;
+      case 0xe019: return Icons.email;
+      case 0xe01a: return Icons.web;
+      case 0xe01b: return Icons.category;
+      // Add more mappings as needed
+      default: 
+        // For unmapped icons, create dynamic IconData
+        // This will still cause issues with tree shaking, but we've added --no-tree-shake-icons flag
+        return IconData(codePoint, fontFamily: 'MaterialIcons');
     }
   }
 }

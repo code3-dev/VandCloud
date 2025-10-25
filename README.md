@@ -90,13 +90,13 @@ flutter run
 #### Android
 ```bash
 # Build APK for all architectures
-flutter build apk
+flutter build apk --no-tree-shake-icons
 
 # Build split APKs for each architecture
-flutter build apk --split-per-abi
+flutter build apk --split-per-abi --no-tree-shake-icons
 
 # Build app bundle for Play Store
-flutter build appbundle
+flutter build appbundle --no-tree-shake-icons
 ```
 
 #### Windows
@@ -124,7 +124,7 @@ sudo apt-get install rpm ruby ruby-dev rubygems build-essential
 #### macOS
 ```bash
 # Build macOS desktop application
-flutter build macos
+flutter build macos --no-tree-shake-icons
 ```
 
 ### GitHub Actions Build Setup

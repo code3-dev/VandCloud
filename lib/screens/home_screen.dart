@@ -2,10 +2,12 @@ import 'package:flutter/material.dart';
 import 'package:vandcloud/services/theme_service.dart';
 import '../models/category.dart';
 import '../services/category_service.dart';
+import '../services/custom_category_service.dart';
 import '../widgets/category_card.dart';
 import '../widgets/app_navigation.dart';
 import '../widgets/responsive_layout.dart';
 import '../widgets/tv_layout.dart';
+import '../screens/category_details_screen.dart';
 import 'settings_screen.dart';
 import 'api_items_screen.dart';
 
@@ -21,6 +23,7 @@ class HomeScreen extends StatefulWidget {
 class _HomeScreenState extends State<HomeScreen> {
   int _selectedIndex = 0;
   List<Category> _categories = [];
+  List<Category> _customCategories = []; // Add custom categories list
   bool _isLoading = true;
   String _errorMessage = '';
 
@@ -28,6 +31,7 @@ class _HomeScreenState extends State<HomeScreen> {
   void initState() {
     super.initState();
     _loadCategories();
+    _loadCustomCategories(); // Load custom categories
   }
 
   Future<void> _loadCategories() async {
@@ -43,7 +47,7 @@ class _HomeScreenState extends State<HomeScreen> {
       // Add "All" category at the beginning of the list
       final allCategory = Category(
         name: 'all',
-        title: 'All',
+        title: 'All Categories',
         description: 'View all categories',
       );
 
@@ -63,6 +67,188 @@ class _HomeScreenState extends State<HomeScreen> {
         });
       }
     }
+  }
+
+  /// Load custom categories
+  Future<void> _loadCustomCategories() async {
+    try {
+      final customCategories = await CustomCategoryService.loadCustomCategories();
+      
+      // Add icons to custom categories (they should already have icons from the service)
+      if (mounted) {
+        setState(() {
+          _customCategories = customCategories;
+        });
+      }
+    } catch (e) {
+      // Handle error silently
+      print('Error loading custom categories: $e');
+    }
+  }
+
+  /// Save custom categories
+  Future<void> _saveCustomCategories() async {
+    try {
+      await CustomCategoryService.saveCustomCategories(_customCategories);
+    } catch (e) {
+      // Handle error
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Error saving categories: $e')),
+        );
+      }
+    }
+  }
+
+  /// Add a new custom category
+  Future<void> _addCustomCategory() async {
+    final newCategory = await _showCategoryDialog();
+    if (newCategory != null) {
+      // The icon is already set in the dialog, so we just need to add it to our list
+      setState(() {
+        _customCategories = [..._customCategories, newCategory];
+      });
+      
+      await _saveCustomCategories();
+      
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Category added successfully')),
+        );
+      }
+    }
+  }
+
+  /// Edit a custom category
+  Future<void> _editCustomCategory(int index) async {
+    final categoryToEdit = _customCategories[index];
+    final updatedCategory = await _showCategoryDialog(categoryToEdit);
+    
+    if (updatedCategory != null) {
+      setState(() {
+        _customCategories = List.from(_customCategories)
+          ..[index] = updatedCategory;
+      });
+      
+      await _saveCustomCategories();
+      
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Category updated successfully')),
+        );
+      }
+    }
+  }
+
+  /// Delete a custom category
+  Future<void> _deleteCustomCategory(int index) async {
+    setState(() {
+      _customCategories = List.from(_customCategories)..removeAt(index);
+    });
+    
+    await _saveCustomCategories();
+    
+    if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Category deleted successfully')),
+      );
+    }
+  }
+
+  /// Show category dialog for add/edit
+  Future<Category?> _showCategoryDialog([Category? category]) async {
+    final nameController = TextEditingController(text: category?.name ?? '');
+    final titleController = TextEditingController(text: category?.title ?? '');
+    final descriptionController = TextEditingController(text: category?.description ?? '');
+
+    IconData? selectedIcon = category?.icon;
+
+    return showDialog<Category>(
+      context: context,
+      builder: (BuildContext context) {
+        return StatefulBuilder(
+          builder: (context, setState) {
+            return AlertDialog(
+              title: Text(category == null ? 'Add Category' : 'Edit Category'),
+              content: SingleChildScrollView(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    TextField(
+                      controller: nameController,
+                      decoration: const InputDecoration(
+                        labelText: 'Name',
+                        hintText: 'Enter category name',
+                      ),
+                    ),
+                    TextField(
+                      controller: titleController,
+                      decoration: const InputDecoration(
+                        labelText: 'Title',
+                        hintText: 'Enter category title',
+                      ),
+                    ),
+                    TextField(
+                      controller: descriptionController,
+                      decoration: const InputDecoration(
+                        labelText: 'Description',
+                        hintText: 'Enter category description',
+                      ),
+                    ),
+                    const SizedBox(height: 16),
+                    ListTile(
+                      title: const Text('Select Icon'),
+                      subtitle: Text(selectedIcon != null 
+                          ? 'Selected: ${selectedIcon!.codePoint}' 
+                          : 'No icon selected'),
+                      trailing: selectedIcon != null 
+                          ? Icon(selectedIcon) 
+                          : const Icon(Icons.image_not_supported),
+                      onTap: () async {
+                        // Use a simple icon selection instead of the icon picker
+                        final selected = await _showIconSelectionDialog(context);
+                        if (selected != null) {
+                          setState(() {
+                            selectedIcon = selected;
+                          });
+                        }
+                      },
+                    ),
+                  ],
+                ),
+              ),
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.of(context).pop(),
+                  child: const Text('Cancel'),
+                ),
+                TextButton(
+                  onPressed: () {
+                    if (nameController.text.isEmpty || titleController.text.isEmpty) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(content: Text('Name and title are required')),
+                      );
+                      return;
+                    }
+                    
+                    final category = Category(
+                      name: nameController.text,
+                      title: titleController.text,
+                      description: descriptionController.text,
+                      icon: selectedIcon,
+                      // iconCode will be automatically set in the toJson method
+                    );
+                    
+                    Navigator.of(context).pop(category);
+                  },
+                  child: Text(category == null ? 'Add' : 'Update'),
+                ),
+              ],
+            );
+          },
+        );
+      },
+    );
   }
 
   void _onNavigationChanged(int index) {
@@ -110,6 +296,10 @@ class _HomeScreenState extends State<HomeScreen> {
             label: 'Settings',
           ),
         ],
+      ),
+      floatingActionButton: FloatingActionButton(
+        onPressed: _addCustomCategory,
+        child: const Icon(Icons.add),
       ),
     );
   }
@@ -190,18 +380,15 @@ class _HomeScreenState extends State<HomeScreen> {
       );
     }
 
+    // Combine system categories and custom categories
+    final allCategories = [..._categories, ..._customCategories];
+
+    // Add minimal padding at top and bottom
     return Padding(
-      padding: const EdgeInsets.all(16.0),
+      padding: const EdgeInsets.symmetric(vertical: 8.0), // Minimal vertical padding
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(
-            'Categories',
-            style: Theme.of(
-              context,
-            ).textTheme.headlineMedium?.copyWith(fontWeight: FontWeight.bold),
-          ),
-          const SizedBox(height: 16),
           Expanded(
             child: GridView.builder(
               gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
@@ -210,26 +397,139 @@ class _HomeScreenState extends State<HomeScreen> {
                 crossAxisSpacing: 16,
                 mainAxisSpacing: 16,
               ),
-              itemCount: _categories.length,
+              itemCount: allCategories.length,
               itemBuilder: (context, index) {
+                final category = allCategories[index];
+                final isCustomCategory = index >= _categories.length;
+                final customIndex = index - _categories.length;
+
                 return CategoryCard(
-                  category: _categories[index],
+                  category: category,
                   onTap: () {
-                    // Navigate to API items screen when a category is clicked
+                    // Navigate to category details screen when a category is clicked
                     Navigator.push(
                       context,
                       MaterialPageRoute(
-                        builder: (context) =>
-                            ApiItemsScreen(category: _categories[index]),
+                        builder: (context) => CategoryDetailsScreen(category: category),
                       ),
                     );
                   },
+                  onLongPress: isCustomCategory 
+                    ? () => _showCategoryOptions(customIndex) 
+                    : null, // Only custom categories can be edited/deleted
                 );
               },
             ),
           ),
         ],
       ),
+    );
+  }
+
+  /// Show options for a custom category (edit/delete)
+  void _showCategoryOptions(int index) {
+    final category = _customCategories[index];
+    
+    showModalBottomSheet(
+      context: context,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (BuildContext context) {
+        return SafeArea(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              // Header with drag handle
+              Container(
+                margin: const EdgeInsets.symmetric(vertical: 8),
+                height: 4,
+                width: 40,
+                decoration: BoxDecoration(
+                  color: Colors.grey[300],
+                  borderRadius: BorderRadius.circular(2),
+                ),
+              ),
+              // Category name
+              Padding(
+                padding: const EdgeInsets.all(16.0),
+                child: Text(
+                  category.title,
+                  style: const TextStyle(
+                    fontSize: 18,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+              ),
+              // Options
+              ListTile(
+                leading: const Icon(Icons.edit, color: Colors.blue),
+                title: const Text('Edit Category'),
+                onTap: () {
+                  Navigator.pop(context); // Close the modal
+                  _editCustomCategory(index);
+                },
+              ),
+              ListTile(
+                leading: const Icon(Icons.delete, color: Colors.red),
+                title: const Text('Delete Category'),
+                onTap: () {
+                  Navigator.pop(context); // Close the modal
+                  _deleteCustomCategory(index);
+                },
+              ),
+              const Divider(height: 1),
+              ListTile(
+                leading: const Icon(Icons.cancel, color: Colors.grey),
+                title: const Text('Cancel'),
+                onTap: () {
+                  Navigator.pop(context); // Close the modal
+                },
+              ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
+  /// Show a simple icon selection dialog
+  Future<IconData?> _showIconSelectionDialog(BuildContext context) async {
+    final List<IconData> icons = CustomCategoryService.getAllAvailableIcons();
+
+    return showDialog<IconData>(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          title: const Text('Select an Icon'),
+          content: SizedBox(
+            width: double.maxFinite,
+            child: GridView.builder(
+              shrinkWrap: true,
+              gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                crossAxisCount: 5,
+                crossAxisSpacing: 8,
+                mainAxisSpacing: 8,
+              ),
+              itemCount: icons.length,
+              itemBuilder: (context, index) {
+                return IconButton(
+                  icon: Icon(icons[index]),
+                  onPressed: () {
+                    Navigator.of(context).pop(icons[index]);
+                  },
+                );
+              },
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(),
+              child: const Text('Cancel'),
+            ),
+          ],
+        );
+      },
     );
   }
 }

@@ -4,8 +4,9 @@ import '../models/category.dart';
 class CategoryCard extends StatelessWidget {
   final Category category;
   final VoidCallback onTap;
+  final VoidCallback? onLongPress; // Add long press callback
 
-  const CategoryCard({Key? key, required this.category, required this.onTap})
+  const CategoryCard({Key? key, required this.category, required this.onTap, this.onLongPress})
     : super(key: key);
 
   @override
@@ -39,6 +40,7 @@ class CategoryCard extends StatelessWidget {
         color: Colors.transparent,
         child: InkWell(
           onTap: onTap,
+          onLongPress: onLongPress, // Add long press handler
           borderRadius: BorderRadius.circular(16),
           splashColor: Theme.of(context).primaryColor.withOpacity(0.1),
           highlightColor: Theme.of(context).primaryColor.withOpacity(0.05),
@@ -54,7 +56,7 @@ class CategoryCard extends StatelessWidget {
                     borderRadius: BorderRadius.circular(12),
                   ),
                   child: Icon(
-                    _getCategoryIcon(category.name),
+                    _getCategoryIcon(category), // Update to use the category object
                     color: Theme.of(context).primaryColor,
                     size: 24,
                   ),
@@ -79,8 +81,14 @@ class CategoryCard extends StatelessWidget {
     );
   }
 
-  IconData _getCategoryIcon(String categoryName) {
-    switch (categoryName) {
+  IconData _getCategoryIcon(Category category) {
+    // Use the category's icon if it has one
+    if (category.icon != null) {
+      return category.icon!;
+    }
+    
+    // Fall back to the original logic for system categories
+    switch (category.name) {
       case 'engine':
         return Icons.search_rounded;
       case 'ai':
@@ -91,6 +99,8 @@ class CategoryCard extends StatelessWidget {
         return Icons.build_rounded;
       case 'developer':
         return Icons.code_rounded;
+      case 'all':
+        return Icons.apps;
       default:
         return Icons.category_rounded;
     }

@@ -12,4 +12,13 @@ class ApiItem {
       category: json['category'] ?? '',
     );
   }
+  
+  // Add toJson method for persistence
+  Map<String, dynamic> toJson() {
+    return {
+      'name': name,
+      'url': url,
+      'category': category,
+    };
+  }
 }

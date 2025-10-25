@@ -8,6 +8,8 @@ import '../models/api_item.dart';
 import '../models/category.dart';
 import '../services/api_service.dart';
 import '../services/timeout_service.dart';
+import '../services/batch_size_service.dart';
+import '../services/custom_api_item_service.dart';
 import '../widgets/results_chart_card.dart';
 
 class ApiItemsScreen extends StatefulWidget {
@@ -26,16 +28,29 @@ class _ApiItemsScreenState extends State<ApiItemsScreen> {
   bool _isTesting = false;
   Map<String, HostStatus> _hostStatuses = {};
   int _timeoutSeconds = 30;
+  int _batchSize = 10;
 
   // Filter and sort options
   bool _hideFailedItems = false;
+  bool _hideSuccessItems = false;
   SortOption _sortOption = SortOption.name;
+
+  // Flag to determine if this is a custom category
+  bool get _isCustomCategory => widget.category.name.startsWith('custom_') || 
+                               !_isSystemCategory(widget.category.name);
+
+  // Helper method to determine if a category is a system category
+  bool _isSystemCategory(String categoryName) {
+    final systemCategories = ['all', 'engine', 'ai', 'social', 'tools', 'developer'];
+    return systemCategories.contains(categoryName);
+  }
 
   @override
   void initState() {
     super.initState();
     _loadApiItems();
     _loadTimeoutSetting();
+    _loadBatchSizeSetting();
   }
 
   Future<void> _loadApiItems() async {
@@ -46,9 +61,20 @@ class _ApiItemsScreenState extends State<ApiItemsScreen> {
         _errorMessage = '';
       });
 
-      final apiItems = await ApiService().fetchApiItemsByCategory(
-        widget.category.name,
-      );
+      List<ApiItem> apiItems;
+
+      // Load items based on whether this is a custom category or system category
+      if (_isCustomCategory) {
+        // Load custom API items
+        apiItems = await CustomApiItemService.getCustomApiItemsForCategory(
+          widget.category.name,
+        );
+      } else {
+        // Load system API items
+        apiItems = await ApiService().fetchApiItemsByCategory(
+          widget.category.name,
+        );
+      }
 
       // Check if widget is still mounted before updating state
       if (mounted) {
@@ -75,9 +101,21 @@ class _ApiItemsScreenState extends State<ApiItemsScreen> {
     });
   }
 
+  /// Load the batch size setting from storage
+  Future<void> _loadBatchSizeSetting() async {
+    final batchSize = await BatchSizeService.loadBatchSize();
+    if (mounted) {
+      setState(() {
+        _batchSize = batchSize;
+      });
+    }
+  }
+
   Future<void> _testAllHosts() async {
     // Reload timeout setting in case it changed
     await _loadTimeoutSetting();
+    // Reload batch size setting in case it changed
+    await _loadBatchSizeSetting();
 
     setState(() {
       _isTesting = true;
@@ -87,12 +125,13 @@ class _ApiItemsScreenState extends State<ApiItemsScreen> {
     try {
       // Process items in small batches to prevent overwhelming the device
       // This prevents crashes on Android devices with limited resources
-      const batchSize = 5;
+      // Use the configurable batch size instead of hardcoded value
+      // const batchSize = 10; // Removed hardcoded value
 
-      for (var i = 0; i < _apiItems.length; i += batchSize) {
+      for (var i = 0; i < _apiItems.length; i += _batchSize) {
         // Take a batch of items
-        final batchEnd = (i + batchSize < _apiItems.length)
-            ? i + batchSize
+        final batchEnd = (i + _batchSize < _apiItems.length)
+            ? i + _batchSize
             : _apiItems.length;
         final batch = _apiItems.sublist(i, batchEnd);
 
@@ -231,6 +270,13 @@ class _ApiItemsScreenState extends State<ApiItemsScreen> {
     });
   }
 
+  // Add this new method
+  void _toggleHideSuccessItems() {
+    setState(() {
+      _hideSuccessItems = !_hideSuccessItems;
+    });
+  }
+
   void _setSortOption(SortOption option) {
     setState(() {
       _sortOption = option;
@@ -245,6 +291,14 @@ class _ApiItemsScreenState extends State<ApiItemsScreen> {
       filteredItems = filteredItems.where((item) {
         final status = _hostStatuses[item.name];
         return status == null || status.ping != -1;
+      }).toList();
+    }
+
+    // Add this new filter for hiding success items
+    if (_hideSuccessItems) {
+      filteredItems = filteredItems.where((item) {
+        final status = _hostStatuses[item.name];
+        return status == null || !status.isSuccess;
       }).toList();
     }
 
@@ -308,6 +362,14 @@ class _ApiItemsScreenState extends State<ApiItemsScreen> {
           onPressed: () => Navigator.of(context).pop(),
         ),
         actions: [
+          // Add button for custom categories
+          if (_isCustomCategory) ...[
+            IconButton(
+              icon: const Icon(Icons.add),
+              onPressed: _showAddItemDialog,
+              tooltip: 'Add API Item',
+            ),
+          ],
           IconButton(
             icon: _isTesting
                 ? const CircularProgressIndicator(color: Colors.white)
@@ -320,6 +382,9 @@ class _ApiItemsScreenState extends State<ApiItemsScreen> {
               switch (result) {
                 case 'hide_failed':
                   _toggleHideFailedItems();
+                  break;
+                case 'hide_success': // Add this case
+                  _toggleHideSuccessItems();
                   break;
                 case 'sort_ping':
                   _setSortOption(SortOption.ping);
@@ -348,6 +413,29 @@ class _ApiItemsScreenState extends State<ApiItemsScreen> {
                       _hideFailedItems
                           ? 'Show Failed Items'
                           : 'Hide Failed Items',
+                    ),
+                  ],
+                ),
+              ),
+              // Add this new menu item
+              PopupMenuItem<String>(
+                value: 'hide_success',
+                child: Row(
+                  children: [
+                    Icon(
+                      _hideSuccessItems
+                          ? Icons.visibility_off
+                          : Icons.visibility,
+                      // Use theme-appropriate color
+                      color: _hideSuccessItems
+                          ? Theme.of(context).colorScheme.primary
+                          : Theme.of(context).iconTheme.color,
+                    ),
+                    const SizedBox(width: 8),
+                    Text(
+                      _hideSuccessItems
+                          ? 'Show Success Items'
+                          : 'Hide Success Items',
                     ),
                   ],
                 ),
@@ -421,7 +509,21 @@ class _ApiItemsScreenState extends State<ApiItemsScreen> {
     final results = _calculateResults();
 
     if (filteredAndSortedItems.isEmpty) {
-      return const Center(child: Text('No API items found for this category'));
+      return Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            const Text('No API items found for this category'),
+            if (_isCustomCategory) ...[
+              const SizedBox(height: 16),
+              ElevatedButton(
+                onPressed: _showAddItemDialog,
+                child: const Text('Add Your First Item'),
+              ),
+            ],
+          ],
+        ),
+      );
     }
 
     return ListView(
@@ -476,12 +578,17 @@ class _ApiItemsScreenState extends State<ApiItemsScreen> {
                   ],
                 ],
               ),
-              trailing: IconButton(
-                icon: const Icon(Icons.arrow_forward_ios),
-                onPressed: () {
-                  _showItemOptionsModal(context, item);
-                },
-              ),
+              trailing: _isCustomCategory 
+                ? IconButton(
+                    icon: const Icon(Icons.more_vert),
+                    onPressed: () => _showItemOptionsModal(context, item),
+                  )
+                : IconButton(
+                    icon: const Icon(Icons.arrow_forward_ios),
+                    onPressed: () {
+                      _showItemOptionsModal(context, item);
+                    },
+                  ),
               onTap: () {
                 _showItemOptionsModal(context, item);
               },
@@ -489,6 +596,163 @@ class _ApiItemsScreenState extends State<ApiItemsScreen> {
           );
         }).toList(),
       ],
+    );
+  }
+
+  // Show dialog to add a new API item
+  Future<void> _showAddItemDialog() async {
+    final nameController = TextEditingController();
+    final urlController = TextEditingController();
+
+    return showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          title: const Text('Add API Item'),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              TextField(
+                controller: nameController,
+                decoration: const InputDecoration(
+                  labelText: 'Name',
+                  hintText: 'Enter item name',
+                ),
+              ),
+              TextField(
+                controller: urlController,
+                decoration: const InputDecoration(
+                  labelText: 'URL',
+                  hintText: 'Enter URL',
+                ),
+              ),
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(),
+              child: const Text('Cancel'),
+            ),
+            ElevatedButton(
+              onPressed: () async {
+                if (nameController.text.isNotEmpty && urlController.text.isNotEmpty) {
+                  final newItem = ApiItem(
+                    name: nameController.text,
+                    url: urlController.text,
+                    category: widget.category.name,
+                  );
+                  
+                  await CustomApiItemService.addCustomApiItem(newItem);
+                  Navigator.of(context).pop();
+                  _loadApiItems(); // Refresh the list
+                  
+                  if (mounted) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(content: Text('Item added successfully')),
+                    );
+                  }
+                }
+              },
+              child: const Text('Add'),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  // Show dialog to edit an existing API item
+  Future<void> _showEditItemDialog(ApiItem item) async {
+    final nameController = TextEditingController(text: item.name);
+    final urlController = TextEditingController(text: item.url);
+
+    return showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          title: const Text('Edit API Item'),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              TextField(
+                controller: nameController,
+                decoration: const InputDecoration(
+                  labelText: 'Name',
+                  hintText: 'Enter item name',
+                ),
+              ),
+              TextField(
+                controller: urlController,
+                decoration: const InputDecoration(
+                  labelText: 'URL',
+                  hintText: 'Enter URL',
+                ),
+              ),
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(),
+              child: const Text('Cancel'),
+            ),
+            ElevatedButton(
+              onPressed: () async {
+                if (nameController.text.isNotEmpty && urlController.text.isNotEmpty) {
+                  final updatedItem = ApiItem(
+                    name: nameController.text,
+                    url: urlController.text,
+                    category: item.category,
+                  );
+                  
+                  await CustomApiItemService.updateCustomApiItem(item.name, updatedItem);
+                  Navigator.of(context).pop();
+                  _loadApiItems(); // Refresh the list
+                  
+                  if (mounted) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(content: Text('Item updated successfully')),
+                    );
+                  }
+                }
+              },
+              child: const Text('Update'),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  // Show confirmation dialog to delete an API item
+  Future<void> _showDeleteItemDialog(ApiItem item) async {
+    return showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          title: const Text('Delete API Item'),
+          content: Text('Are you sure you want to delete "${item.name}"?'),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(),
+              child: const Text('Cancel'),
+            ),
+            ElevatedButton(
+              onPressed: () async {
+                await CustomApiItemService.deleteCustomApiItem(item.name);
+                Navigator.of(context).pop();
+                _loadApiItems(); // Refresh the list
+                
+                if (mounted) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(content: Text('Item deleted successfully')),
+                  );
+                }
+              },
+              child: const Text('Delete'),
+            ),
+          ],
+        );
+      },
     );
   }
 
@@ -525,7 +789,27 @@ class _ApiItemsScreenState extends State<ApiItemsScreen> {
                   ),
                 ),
               ),
-              // Options
+              // Options for custom categories
+              if (_isCustomCategory) ...[
+                ListTile(
+                  leading: const Icon(Icons.edit, color: Colors.blue),
+                  title: const Text('Edit Item'),
+                  onTap: () {
+                    Navigator.pop(context); // Close the modal
+                    _showEditItemDialog(item);
+                  },
+                ),
+                ListTile(
+                  leading: const Icon(Icons.delete, color: Colors.red),
+                  title: const Text('Delete Item'),
+                  onTap: () {
+                    Navigator.pop(context); // Close the modal
+                    _showDeleteItemDialog(item);
+                  },
+                ),
+                const Divider(height: 1),
+              ],
+              // Common options
               ListTile(
                 leading: const Icon(Icons.open_in_browser, color: Colors.blue),
                 title: const Text('Open in Browser'),
@@ -544,7 +828,7 @@ class _ApiItemsScreenState extends State<ApiItemsScreen> {
               ),
               const Divider(height: 1),
               ListTile(
-                leading: const Icon(Icons.cancel, color: Colors.red),
+                leading: const Icon(Icons.cancel, color: Colors.grey),
                 title: const Text('Cancel'),
                 onTap: () {
                   Navigator.pop(context); // Close the modal

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:vandcloud/services/theme_service.dart';
-import '../services/timeout_service.dart'; // Add this import
+import '../services/timeout_service.dart';
+import '../services/batch_size_service.dart';
 import '../widgets/responsive_layout.dart';
 import '../widgets/app_navigation.dart';
 import '../widgets/tv_layout.dart';
@@ -18,13 +19,15 @@ class SettingsScreen extends StatefulWidget {
 class _SettingsScreenState extends State<SettingsScreen> {
   int _selectedIndex = 1;
   AppTheme _selectedTheme = AppTheme.system;
-  int _timeoutSeconds = 30; // Add timeout setting
+  int _timeoutSeconds = 30;
+  int _batchSize = 10;
 
   @override
   void initState() {
     super.initState();
     _loadThemePreference();
-    _loadTimeoutSetting(); // Load timeout setting
+    _loadTimeoutSetting();
+    _loadBatchSizeSetting();
   }
 
   // Load the saved theme preference
@@ -61,6 +64,22 @@ class _SettingsScreenState extends State<SettingsScreen> {
     await TimeoutService.saveTimeout(timeout);
     setState(() {
       _timeoutSeconds = timeout;
+    });
+  }
+
+  // Load batch size setting
+  Future<void> _loadBatchSizeSetting() async {
+    final batchSize = await BatchSizeService.loadBatchSize();
+    setState(() {
+      _batchSize = batchSize;
+    });
+  }
+
+  // Save batch size setting
+  Future<void> _saveBatchSizeSetting(int batchSize) async {
+    await BatchSizeService.saveBatchSize(batchSize);
+    setState(() {
+      _batchSize = batchSize;
     });
   }
 
@@ -267,6 +286,22 @@ class _SettingsScreenState extends State<SettingsScreen> {
                         },
                       ),
                     ),
+                    const Divider(),
+                    Text(
+                      'Batch Processing',
+                      style: Theme.of(context).textTheme.titleLarge,
+                    ),
+                    const SizedBox(height: 16),
+                    ListTile(
+                      title: const Text('Batch Size'),
+                      subtitle: Text('$_batchSize items per batch'),
+                      trailing: IconButton(
+                        icon: const Icon(Icons.edit),
+                        onPressed: () {
+                          _showBatchSizeDialog();
+                        },
+                      ),
+                    ),
                   ],
                 ),
               ),
@@ -361,6 +396,69 @@ class _SettingsScreenState extends State<SettingsScreen> {
               child: const Text('Save'),
             ),
           ],
+        );
+      },
+    );
+  }
+
+  void _showBatchSizeDialog() {
+    int tempBatchSize = _batchSize;
+
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return StatefulBuilder(
+          builder: (context, setState) {
+            return AlertDialog(
+              title: const Text('Set Batch Size'),
+              content: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text('Items per batch: $tempBatchSize'),
+                  const SizedBox(height: 16),
+                  Slider(
+                    value: tempBatchSize.toDouble(),
+                    min: BatchSizeService.minBatchSize.toDouble(),
+                    max: BatchSizeService.maxBatchSize.toDouble(),
+                    divisions: BatchSizeService.maxBatchSize - BatchSizeService.minBatchSize,
+                    label: tempBatchSize.toString(),
+                    onChanged: (value) {
+                      setState(() {
+                        tempBatchSize = value.round();
+                      });
+                    },
+                  ),
+                  const SizedBox(height: 16),
+                  Text(
+                    'Controls how many items are processed simultaneously during testing. '
+                    'Lower values use fewer system resources, higher values complete faster.',
+                    style: Theme.of(context).textTheme.bodySmall,
+                  ),
+                ],
+              ),
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.of(context).pop(),
+                  child: const Text('Cancel'),
+                ),
+                ElevatedButton(
+                  onPressed: () async {
+                    await _saveBatchSizeSetting(tempBatchSize);
+                    if (mounted) {
+                      Navigator.of(context).pop();
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(
+                          content: Text('Batch size saved: $tempBatchSize'),
+                          duration: const Duration(seconds: 1),
+                        ),
+                      );
+                    }
+                  },
+                  child: const Text('Save'),
+                ),
+              ],
+            );
+          },
         );
       },
     );

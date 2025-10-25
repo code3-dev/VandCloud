@@ -1,6 +1,6 @@
 Name: vandcloud
-Version: 1.0.3
-Release: 4
+Version: 1.0.4
+Release: 5
 Summary: VandCloud
 
 License: MIT
@@ -63,5 +63,5 @@ cp icons/vandcloud.png %{buildroot}/%{_datadir}/icons/hicolor/256x256/apps/vandc
 %{_datadir}/icons/hicolor/512x512/apps/vandcloud.png
 
 %changelog
-* Thu Oct 16 2025 Hossein Pira <h3dev.pira@gmail.com> - 1.0.3-4
+* Thu Oct 16 2025 Hossein Pira <h3dev.pira@gmail.com> - 1.0.4-5
 - Initial release

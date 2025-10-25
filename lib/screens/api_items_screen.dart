@@ -4,12 +4,15 @@ import 'dart:io';
 import 'dart:async';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:flutter/services.dart';
+import 'package:pdf/pdf.dart';
+import 'package:path_provider/path_provider.dart';
 import '../models/api_item.dart';
 import '../models/category.dart';
 import '../services/api_service.dart';
 import '../services/timeout_service.dart';
 import '../services/batch_size_service.dart';
 import '../services/custom_api_item_service.dart';
+import '../services/pdf_service.dart';
 import '../widgets/results_chart_card.dart';
 
 class ApiItemsScreen extends StatefulWidget {
@@ -386,6 +389,9 @@ class _ApiItemsScreenState extends State<ApiItemsScreen> {
                 case 'hide_success': // Add this case
                   _toggleHideSuccessItems();
                   break;
+                case 'export_pdf': // Add PDF export case
+                  _exportToPdf();
+                  break;
                 case 'sort_ping':
                   _setSortOption(SortOption.ping);
                   break;
@@ -437,6 +443,18 @@ class _ApiItemsScreenState extends State<ApiItemsScreen> {
                           ? 'Show Success Items'
                           : 'Hide Success Items',
                     ),
+                  ],
+                ),
+              ),
+              // Add PDF export menu item
+              const PopupMenuDivider(),
+              PopupMenuItem<String>(
+                value: 'export_pdf',
+                child: Row(
+                  children: [
+                    const Icon(Icons.picture_as_pdf, color: Colors.red),
+                    const SizedBox(width: 8),
+                    const Text('Export PDF'),
                   ],
                 ),
               ),
@@ -930,6 +948,45 @@ class _ApiItemsScreenState extends State<ApiItemsScreen> {
         ScaffoldMessenger.of(
           context,
         ).showSnackBar(SnackBar(content: Text('Error copying link: $e')));
+      }
+    }
+  }
+
+  /// Export test results to PDF
+  Future<void> _exportToPdf() async {
+    try {
+      // Show loading indicator
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Generating PDF report...')),
+        );
+      }
+      
+      print('Exporting PDF with ${_apiItems.length} items and ${_hostStatuses.length} statuses');
+      
+      // Generate the PDF
+      final pdfPath = await PdfService.generateApiTestReport(
+        category: widget.category,
+        apiItems: List.unmodifiable(_apiItems), // Pass a copy of the list
+        hostStatuses: Map.unmodifiable(_hostStatuses), // Pass a copy of the map
+      );
+      
+      // Show success message
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('PDF generated successfully: $pdfPath'),
+            duration: const Duration(seconds: 5),
+          ),
+        );
+      }
+    } catch (e) {
+      print('Error generating PDF: $e');
+      // Show error message
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Error generating PDF: $e')),
+        );
       }
     }
   }

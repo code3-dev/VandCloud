@@ -400,9 +400,9 @@ class _HomeScreenState extends State<HomeScreen> {
     // Combine system categories and custom categories
     final allCategories = [..._categories, ..._customCategories];
 
-    // Add minimal padding at top and bottom
+    // Add padding at top, bottom, left, and right
     return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 8.0), // Minimal vertical padding
+      padding: const EdgeInsets.all(8.0), // Padding on all sides
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -492,7 +492,7 @@ class _HomeScreenState extends State<HomeScreen> {
                 title: const Text('Delete Category'),
                 onTap: () {
                   Navigator.pop(context); // Close the modal
-                  _deleteCustomCategory(index);
+                  _confirmDeleteCategory(index); // Show confirmation dialog
                 },
               ),
               const Divider(height: 1),
@@ -543,6 +543,36 @@ class _HomeScreenState extends State<HomeScreen> {
             TextButton(
               onPressed: () => Navigator.of(context).pop(),
               child: const Text('Cancel'),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  /// Show confirmation dialog for deleting a category
+  void _confirmDeleteCategory(int index) {
+    final category = _customCategories[index];
+    
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          title: const Text('Confirm Delete'),
+          content: Text('Are you sure you want to delete "${category.title}"? This action cannot be undone.'),
+          actions: [
+            TextButton(
+              onPressed: () {
+                Navigator.of(context).pop(); // Close dialog
+              },
+              child: const Text('Cancel'),
+            ),
+            TextButton(
+              onPressed: () {
+                Navigator.of(context).pop(); // Close dialog
+                _deleteCustomCategory(index); // Proceed with deletion
+              },
+              child: const Text('Delete'),
             ),
           ],
         );

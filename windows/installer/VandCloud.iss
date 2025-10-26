@@ -1,5 +1,5 @@
 #define MyAppName "VandCloud"
-#define MyAppVersion "1.0.4"
+#define MyAppVersion "1.0.5"
 #define MyAppPublisher "Hossein Pira"
 #define MyAppURL "https://github.com/code3-dev/VandCloud"
 #define MyAppExeName "vandcloud.exe"
